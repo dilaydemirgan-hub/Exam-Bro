@@ -1,0 +1,11 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.exambroapp.sinav",
+      "sha256_cert_fingerprints":
+        ["18:8D:48:7A:E2:43:6D:AF:D6:C4:DB:3B:D4:AA:30:91:0D:54:56:B3:09:CE:62:E2:EE:C4:98:47:67:38:27:62"]
+    }
+  }
+]
