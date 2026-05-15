@@ -1,4 +1,30 @@
 import { useState, useEffect } from "react";
+import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
+import { LocalNotifications } from "@capacitor/local-notifications";
+
+const tap = (style = "light") => {
+  try {
+    if (style === "success") Haptics.notification({ type: NotificationType.Success });
+    else Haptics.impact({ style: style === "medium" ? ImpactStyle.Medium : ImpactStyle.Light });
+  } catch {}
+};
+
+const scheduleDaily = async () => {
+  try {
+    const perm = await LocalNotifications.requestPermissions();
+    if (perm.display !== "granted") { alert("Bildirim izni verilmedi."); return false; }
+    await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 1,
+        title: "Exam Bro 🎓",
+        body: "Bugün çalıştın mı? Geri sayım devam ediyor.",
+        schedule: { on: { hour: 20, minute: 0 }, repeats: true, allowWhileIdle: true }
+      }]
+    });
+    return true;
+  } catch (e) { return false; }
+};
 
 // ── Storage helpers ──────────────────────────────────────────
 const store = {
@@ -246,8 +272,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const t = setInterval(() => setTick(n => n+1), 1000);
-    return () => clearInterval(t);
+    let t;
+    const start = () => { t = setInterval(() => setTick(n => n+1), 1000); };
+    const stop = () => clearInterval(t);
+    const onVis = () => { if (document.hidden) stop(); else { stop(); start(); } };
+    start();
+    document.addEventListener("visibilitychange", onVis);
+    return () => { stop(); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   const saveGrade = async g => {
@@ -258,10 +289,24 @@ export default function App() {
     await store.set("xb_hidden", dh);
   };
 
+
   const logout = async () => {
     setGrade("");
     setTab("home");
     await store.set("xb_grade", "");
+  };
+
+  const resetAll = async () => {
+    if (!confirm("Tüm verileriniz silinecek. Emin misin?")) return;
+    for (const k of ["xb_grade","xb_hidden","xb_customs","xb_studied","xb_streak","xb_lastStudy","xb_anxiety","xb_goals","xb_chat_welcomed"]) {
+      await store.set(k, null);
+    }
+    location.reload();
+  };
+
+  const enableReminder = async () => {
+    const ok = await scheduleDaily();
+    if (ok) { tap("success"); alert("Her gün 20:00'de hatırlatma açıldı."); }
   };
 
   const toggleHide = async id => {
@@ -278,6 +323,7 @@ export default function App() {
   };
 
   const markStudied = async () => {
+    tap("success");
     if (doneToday) return;
     const d = today(), ns = [...studied, d];
     const yest = new Date(); yest.setDate(yest.getDate() - 1);
@@ -315,7 +361,7 @@ export default function App() {
   const motivText = MOTIV[dayIndex % MOTIV.length];
   const cbtTip    = CBT[dayIndex % CBT.length];
   const visFixed  = FIXED.filter(e => !hidden.includes(e.id));
-  const allExams  = [...visFixed, ...customs.slice().sort((a, b) => new Date(a.date) - new Date(b.date))];
+  const allExams  = [...visFixed, ...customs.slice().sort((a, b) => new Date(a.date) - new Date(b.date))].filter(ex => new Date(ex.date) > Date.now());
 
   const TABS = [
     ["home","🏠","Ana Sayfa"],
@@ -355,7 +401,7 @@ export default function App() {
         {tab === "exams"   && <ExamsTab   grade={grade} hidden={hidden} onToggle={toggleHide} customs={customs} onAdd={addExam} onDel={delExam} />}
         {tab === "goals"   && <GoalsTab   goals={goals} onAdd={addGoal} onToggle={toggleGoal} onDel={delGoal} />}
         {tab === "anxiety" && <AnxietyTab log={anxiety} onRate={rateAnxiety} />}
-        {tab === "report"  && <ReportTab  studied={studied} streak={streak} anxiety={anxiety} goals={goals} />}
+        {tab === "report"  && <ReportTab  studied={studied} streak={streak} anxiety={anxiety} goals={goals} onReset={resetAll} onEnableReminder={enableReminder} />}
       </div>
 
       <div style={S.nav}>
@@ -742,7 +788,7 @@ function AnxietyTab({ log, onRate }) {
 }
 
 // ── Report ───────────────────────────────────────────────────
-function ReportTab({ studied, streak, anxiety, goals }) {
+function ReportTab({ studied, streak, anxiety, goals, onReset, onEnableReminder }) {
   const now  = new Date();
   const week = Array.from({length:7}, (_, i) => { const d = new Date(now); d.setDate(now.getDate()-6+i); return d.toISOString().split("T")[0]; });
 
@@ -806,6 +852,11 @@ function ReportTab({ studied, streak, anxiety, goals }) {
         <div style={{ fontSize:18, fontWeight:700, marginBottom:8, color:"#e0e0ff" }}>{msg}</div>
         <div style={{ fontSize:14, color:"#666", lineHeight:1.65 }}>{detail}</div>
       </div>
+
+      <div style={{ marginTop:36, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
+        <button onClick={onEnableReminder} style={{ background:"transparent", border:"1px solid #2a2540", color:"#888", padding:"10px 18px", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'Fredoka',sans-serif" }}>🔔 Günlük hatırlatmayı aç</button>
+        <button onClick={onReset} style={{ background:"transparent", border:"1px solid #3a1a2a", color:"#8a3a4a", padding:"10px 18px", borderRadius:10, fontSize:12, cursor:"pointer", fontFamily:"'Fredoka',sans-serif", letterSpacing:0.5 }}>Tüm verileri sıfırla</button>
+      </div>
     </div>
   );
 }
@@ -834,14 +885,14 @@ function BackBtn({ onClick, title }) {
 
 // ── Styles & CSS ─────────────────────────────────────────────
 const S = {
-  root:       { background:"#080810", minHeight:"100vh", fontFamily:"'Fredoka',sans-serif", color:"#fff", paddingBottom:84, maxWidth:480, margin:"0 auto", position:"relative" },
+  root:       { background:"#080810", minHeight:"100vh", fontFamily:"'Fredoka',sans-serif", color:"#fff", paddingBottom:"calc(84px + env(safe-area-inset-bottom))", maxWidth:480, margin:"0 auto", position:"relative" },
   header:     { padding:"18px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"#080810", zIndex:10, borderBottom:"1px solid #12121e" },
   logo:       { fontSize:26, fontWeight:700, background:"linear-gradient(90deg,#8338EC,#FF006E,#FFBE0B)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", letterSpacing:-0.5 },
   headerSub:  { fontSize:12, color:"#666", marginTop:-2 },
   streakBadge:{ background:"linear-gradient(135deg,#7a2d00,#b34500)", borderRadius:20, padding:"4px 12px", fontSize:14, fontWeight:700, border:"1px solid #FF8C00" },
   outBtn:     { background:"#1a1a2e", border:"1px solid #252540", color:"#888", padding:"6px 10px", borderRadius:10, cursor:"pointer", fontSize:15, fontFamily:"'Fredoka',sans-serif" },
   scroll:     { padding:"14px 16px 0" },
-  nav:        { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(10,10,20,0.96)", borderTop:"1px solid #1a1a2e", display:"flex", zIndex:100, backdropFilter:"blur(12px)" },
+  nav:        { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(10,10,20,0.96)", borderTop:"1px solid #1a1a2e", display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)", backdropFilter:"blur(12px)" },
   navBtn:     { flex:1, background:"none", border:"none", padding:"10px 4px 8px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, position:"relative" },
   navLine:    { position:"absolute", top:0, left:"20%", right:"20%", height:2, background:"linear-gradient(90deg,#8338EC,#FF006E)", borderRadius:999 },
   boom:       { position:"fixed", inset:0, zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.78)", pointerEvents:"none", animation:"boomFade 2.6s forwards" },
