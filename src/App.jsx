@@ -27,12 +27,39 @@ const scheduleDaily = async () => {
 };
 
 // ── Storage helpers ──────────────────────────────────────────
+// Native (iOS/Android): Capacitor Preferences → UserDefaults / SharedPreferences
+// Web: localStorage fallback
+const isNative = typeof window !== "undefined" && window.Capacitor?.isNativePlatform?.();
 const store = {
   async get(k) {
-    try { const r = await window.storage.get(k); return r?.value ?? null; } catch { return null; }
+    try {
+      if (isNative) {
+        const { Preferences } = await import("@capacitor/preferences");
+        const { value } = await Preferences.get({ key: k });
+        return value;
+      }
+      return localStorage.getItem(k);
+    } catch { return null; }
   },
   async set(k, v) {
-    try { await window.storage.set(k, typeof v === "string" ? v : JSON.stringify(v)); } catch {}
+    try {
+      if (v === null || v === undefined) {
+        if (isNative) {
+          const { Preferences } = await import("@capacitor/preferences");
+          await Preferences.remove({ key: k });
+        } else {
+          localStorage.removeItem(k);
+        }
+        return;
+      }
+      const val = typeof v === "string" ? v : JSON.stringify(v);
+      if (isNative) {
+        const { Preferences } = await import("@capacitor/preferences");
+        await Preferences.set({ key: k, value: val });
+      } else {
+        localStorage.setItem(k, val);
+      }
+    } catch {}
   },
 };
 
