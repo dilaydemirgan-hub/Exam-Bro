@@ -1,29 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Haptics, ImpactStyle, NotificationType } from "@capacitor/haptics";
-import { LocalNotifications } from "@capacitor/local-notifications";
+import { premiumContent, premiumCategoryOrder } from "./premiumContent";
+import { getExamTarget } from "./config/examDates";
+import { scheduleDailyNotifications, cancelDailyNotifications, refreshIfEnabled, detectLegacyEnabled, NOTIF_HOUR } from "./notifications";
+import { useToast, ConfirmSheet, Card, SectionLabel, EmptyState, ProgressBar } from "./ui";
+import {
+  IconHome, IconCalendar, IconTarget, IconPulse, IconChart, IconFlame,
+  IconLock, IconChevronRight, IconChevronLeft, IconX, IconPlus, IconCheck, IconBell,
+  IconEye, IconEyeOff, IconTrash, IconSparkle, IconWind, IconBook,
+  IconClock, IconSwap, IconGraduation,
+} from "./icons";
 
 const tap = (style = "light") => {
   try {
     if (style === "success") Haptics.notification({ type: NotificationType.Success });
     else Haptics.impact({ style: style === "medium" ? ImpactStyle.Medium : ImpactStyle.Light });
   } catch {}
-};
-
-const scheduleDaily = async () => {
-  try {
-    const perm = await LocalNotifications.requestPermissions();
-    if (perm.display !== "granted") { alert("Bildirim izni verilmedi."); return false; }
-    await LocalNotifications.cancel({ notifications: [{ id: 1 }] });
-    await LocalNotifications.schedule({
-      notifications: [{
-        id: 1,
-        title: "Exam Bro 🎓",
-        body: "Bugün çalıştın mı? Geri sayım devam ediyor.",
-        schedule: { on: { hour: 20, minute: 0 }, repeats: true, allowWhileIdle: true }
-      }]
-    });
-    return true;
-  } catch (e) { return false; }
 };
 
 // ── Storage helpers ──────────────────────────────────────────
@@ -63,6 +55,44 @@ const store = {
   },
 };
 
+// ── RevenueCat (in-app purchase) ─────────────────────────────
+// API keys: RevenueCat dashboard → Project Settings → API Keys (public SDK keys)
+const RC_KEYS = {
+  ios:     "appl_iAfwRNXIOYjYTuZywgfTpBoQiwS",   // ← Apple App Store public key
+  android: "goog_XXXXXXXXXXXXXXXXXXXXXXXXX",   // ← Google Play public key
+};
+const ENTITLEMENT = "Exam Bro Pro";   // RevenueCat → Entitlements identifier
+
+// ⚠️ DEV ONLY — tüm premium içeriği test etmek için. SUBMIT'TEN ÖNCE false YAP!
+const DEV_PREMIUM = false;
+
+async function rcConfigure() {
+  if (!isNative) return false;
+  try {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const platform = window.Capacitor.getPlatform();
+    const apiKey = platform === "ios" ? RC_KEYS.ios : RC_KEYS.android;
+    await Purchases.configure({ apiKey });
+    return true;
+  } catch { return false; }
+}
+async function rcIsPremium() {
+  if (!isNative) return false;
+  try {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const info = await Purchases.getCustomerInfo();
+    return !!info?.customerInfo?.entitlements?.active?.[ENTITLEMENT];
+  } catch { return false; }
+}
+async function rcPriceString() {
+  if (!isNative) return null;
+  try {
+    const { Purchases } = await import("@revenuecat/purchases-capacitor");
+    const off = await Purchases.getOfferings();
+    return off?.current?.availablePackages?.[0]?.product?.priceString || null;
+  } catch { return null; }
+}
+
 // ── Grade → which fixed exams are visible by default ─────────
 function defaultHidden(grade) {
   if (grade === "8")               return ["TYT", "AYT"];
@@ -72,24 +102,31 @@ function defaultHidden(grade) {
 }
 
 // ── Static data ──────────────────────────────────────────────
+// Ulusal sınavların tarihi src/config/examDates.js'ten gelir (kendini
+// yenileyen sayaç + fallback). Buradaki `examKey`/`offsetDays` o config'e bağlar;
+// burada hardcoded tarih YOKTUR.
 const FIXED = [
-  { id:"LGS", n:"LGS",     sub:"Liselere Geçiş Sınavı",  date:"2026-06-14T10:00:00", c:"#06D6A0", em:"🏫" },
-  { id:"TYT", n:"TYT",     sub:"Temel Yeterlilik Testi",  date:"2026-06-20T09:30:00", c:"#8338EC", em:"📚" },
-  { id:"AYT", n:"AYT/YDT", sub:"Alan Yeterlilik Testi",   date:"2026-06-21T09:30:00", c:"#FF006E", em:"🎓" },
+  { id:"LGS", n:"LGS",     sub:"Liselere Geçiş Sınavı",  examKey:"lgs", offsetDays:0, c:"#10d99e" },
+  { id:"TYT", n:"TYT",     sub:"Temel Yeterlilik Testi",  examKey:"yks", offsetDays:0, c:"#9d5cff" },
+  { id:"AYT", n:"AYT/YDT", sub:"Alan Yeterlilik Testi",   examKey:"yks", offsetDays:1, c:"#ff4d94" },
 ];
-
+// Bir sınav nesnesi için canlı hedef bilgisi. FIXED ise config'ten (self-renewing),
+// custom/OSYM ise kendi sabit tarihinden.
+function examInfoFor(ex) {
+  if (ex.examKey) return getExamTarget(ex.examKey, { offsetDays: ex.offsetDays || 0 });
+  return null;
+}
 const OSYM = [
-  { id:"ALES1",    n:"ALES / 1",            sub:"Akademik Lisans Tamamlama", date:"2026-05-10T09:30:00", c:"#FF8C00", em:"📝", cat:"Lisansüstü" },
-  { id:"ALES2",    n:"ALES / 2",            sub:"Akademik Lisans Tamamlama", date:"2026-07-26T09:30:00", c:"#FF8C00", em:"📝", cat:"Lisansüstü" },
-  { id:"ALES3",    n:"ALES / 3",            sub:"Akademik Lisans Tamamlama", date:"2026-11-29T09:30:00", c:"#FF8C00", em:"📝", cat:"Lisansüstü" },
-  { id:"DGS",      n:"DGS",                 sub:"Dikey Geçiş Sınavı",        date:"2026-07-19T09:30:00", c:"#3A86FF", em:"🔼", cat:"Ön Lisans" },
-  { id:"KPSS_GYK", n:"KPSS Lisans GY‑GK",  sub:"Genel Yetenek – Genel Kültür", date:"2026-09-06T09:30:00", c:"#06D6A0", em:"🏛️", cat:"Kamu" },
-  { id:"KPSS_AB1", n:"KPSS Alan Bil. / 1", sub:"Lisans A Grubu – 1. Gün",   date:"2026-09-12T09:30:00", c:"#06D6A0", em:"🏛️", cat:"Kamu" },
-  { id:"KPSS_AB2", n:"KPSS Alan Bil. / 2", sub:"Lisans A Grubu – 2. Gün",   date:"2026-09-13T09:30:00", c:"#06D6A0", em:"🏛️", cat:"Kamu" },
-  { id:"KPSS_OOG", n:"KPSS Ortaöğretim",   sub:"Lise Mezunları",             date:"2026-10-25T09:30:00", c:"#06D6A0", em:"🏛️", cat:"Kamu" },
-  { id:"MEB_AGS",  n:"MEB‑AGS",             sub:"MEB Akademi Giriş Sınavı",  date:"2026-07-12T09:30:00", c:"#a855f7", em:"🏫", cat:"Kamu" },
+  { id:"ALES1",    n:"ALES / 1",            sub:"Akademik Lisans Tamamlama", date:"2026-05-10T09:30:00", c:"#ff9736", cat:"Lisansüstü" },
+  { id:"ALES2",    n:"ALES / 2",            sub:"Akademik Lisans Tamamlama", date:"2026-07-26T09:30:00", c:"#ff9736", cat:"Lisansüstü" },
+  { id:"ALES3",    n:"ALES / 3",            sub:"Akademik Lisans Tamamlama", date:"2026-11-29T09:30:00", c:"#ff9736", cat:"Lisansüstü" },
+  { id:"DGS",      n:"DGS",                 sub:"Dikey Geçiş Sınavı",        date:"2026-07-19T09:30:00", c:"#5c9bff", cat:"Ön Lisans" },
+  { id:"KPSS_GYK", n:"KPSS Lisans GY-GK",  sub:"Genel Yetenek – Genel Kültür", date:"2026-09-06T09:30:00", c:"#10d99e", cat:"Kamu" },
+  { id:"KPSS_AB1", n:"KPSS Alan Bil. / 1", sub:"Lisans A Grubu – 1. Gün",   date:"2026-09-12T09:30:00", c:"#10d99e", cat:"Kamu" },
+  { id:"KPSS_AB2", n:"KPSS Alan Bil. / 2", sub:"Lisans A Grubu – 2. Gün",   date:"2026-09-13T09:30:00", c:"#10d99e", cat:"Kamu" },
+  { id:"KPSS_OOG", n:"KPSS Ortaöğretim",   sub:"Lise Mezunları",             date:"2026-10-25T09:30:00", c:"#10d99e", cat:"Kamu" },
+  { id:"MEB_AGS",  n:"MEB-AGS",             sub:"MEB Akademi Giriş Sınavı",  date:"2026-07-12T09:30:00", c:"#b07aff", cat:"Kamu" },
 ];
-
 const GRADES = [
   { v:"5",  l:"5. Sınıf",  e:"🐣" }, { v:"6",  l:"6. Sınıf",      e:"🐥" },
   { v:"7",  l:"7. Sınıf",  e:"🐤" }, { v:"8",  l:"8. Sınıf (LGS)",e:"😤" },
@@ -97,7 +134,6 @@ const GRADES = [
   { v:"11", l:"11. Sınıf", e:"😱" }, { v:"12", l:"12. Sınıf",     e:"💀" },
   { v:"x",  l:"Mezun",     e:"👻" },
 ];
-
 const SUBJ = {
   "5":  ["Türkçe","Matematik","Fen Bilimleri","Sosyal Bilgiler","İngilizce","Din Kültürü"],
   "6":  ["Türkçe","Matematik","Fen Bilimleri","Sosyal Bilgiler","İngilizce","Din Kültürü"],
@@ -109,6 +145,26 @@ const SUBJ = {
   "12": ["TYT Türkçe","TYT Mat","TYT Fen","TYT Sosyal","AYT Mat","AYT Fizik","AYT Kimya","AYT Biyoloji","AYT Edebiyat"],
   "x":  ["TYT Türkçe","TYT Mat","TYT Fen","TYT Sosyal","AYT Mat","KPSS GY","KPSS GK","ALES Sözel","ALES Sayısal","YDS"],
 };
+
+// Sınıfa göre örnek hedef önerileri (yazma alanına basınca chip olarak çıkar)
+function goalSuggestions(grade) {
+  const subs = SUBJ[grade] || [];
+  const out = [];
+  // Ders bazlı somut hedefler — ilk 4 dersten
+  subs.slice(0, 4).forEach(s => out.push(`${s}'ten 20 soru çöz`));
+  // Sınava özel ek öneriler
+  if (grade === "8") {
+    out.push("LGS denemesi çöz", "Yanlışlarımı analiz et");
+  } else if (grade === "12" || grade === "x") {
+    out.push("TYT denemesi çöz", "AYT konu tekrarı yap", "Yanlışlarımı analiz et");
+  } else {
+    out.push("Bir konu tekrarı yap", "Ödevlerimi bitir");
+  }
+  // Herkese uygun genel hedefler
+  out.push("25 dk Pomodoro çalış", "Eksik konuyu tamamla");
+  // Tekrarsız, ilk 8
+  return [...new Set(out)].slice(0, 8);
+}
 
 const MOTIV = [
   "sınav tarihin değişmeyecek. sen değişeceksin.",
@@ -212,20 +268,42 @@ const MOTIV = [
   "tam hazır hissetmeden başlamak da başlamaktır.",
   "bu masaya her oturuş bir yatırım.",
 ];
-
 const CBT = [
   { i:"💭", t:"kaygın normal.", b:"Sınav öncesi kaygı beyninin 'bu önemli' demesi. Düşman değil, uyarı sistemi." },
   { i:"🌊", t:"her şeyi bilmek zorunda değilsin.", b:"Sınav beceri ölçer, mükemmellik değil. Çalıştığın kadar götürsün." },
   { i:"🔄", t:"bugün kötü geçtiyse.", b:"Bir kötü gün süreci bitirmez. Yarın yeniden başlarsın, nokta." },
-  { i:"👁️", t:"karşılaştırma tuzağı.", b:"O kadar çalışıyor — ama sen onun beyninde değilsin. Kendi yoluna bak." },
-  { i:"🌬️", t:"nefes al.", b:"4sn içeri — 4sn tut — 4sn dışarı. İki kez yap. Parasız ve işe yarar." },
+  { i:"👁️", t:"karşılaştırma tuzağı.", b:"Başkası ne kadar çalışıyor, içeride ne yaşıyor bilemezsin. Enerjini onu izlemeye değil, kendi işine harca." },
+  { i:"🌬️", t:"nefes al.", b:"4 sn al, 4 sn tut, 4 sn ver. İki kez tekrarla. Hiçbir şeye ihtiyacın yok, hemen işe yarıyor." },
   { i:"🏋️", t:"küçük adım büyük fark.", b:"20 dakika çalışmak hiç çalışmamaktan katlarca iyidir. Mükemmel plan yoktur." },
 ];
 
+// Kaygı ekranı altındaki günlük değişen sakinleştirici / bilgilendirici notlar
+const ANX_NOTES = [
+  "Bu ekranda her gün kaygını işaretledikçe, zamanla kendi örüntünü görürsün: hangi günler zorlandığını, neyin işe yaradığını. Fark etmek, yönetmenin ilk adımıdır.",
+  "Kaygını bir nota dökmek bile onu biraz hafifletir. İçinde tutmak yerine burada görünür kılıyorsun — bu cesaret ister.",
+  "Yüksek kaygılı bir gün, başarısız olduğun anlamına gelmez. Sadece o gün biraz daha zor geçmiş demektir. Yarın yeniden.",
+  "Duygular hava durumu gibidir: gelir, kalır, geçer. Bugün bulutluysa, bu kalıcı değil.",
+  "Kaygını ölçmek onu yargılamak değil, tanımak içindir. 'Neden böyle hissediyorum?' diye kendine nazik ol.",
+  "Bir hafta boyunca işaretlersen, kaygının sabit olmadığını göreceksin. İniş çıkışlar normaldir — sen de öylesin.",
+  "Yüksek bir gün gördüğünde, o gün ne olduğunu hatırlamaya çalış. Tetikleyiciyi bilmek, bir sonrakine hazırlıklı olmanı sağlar.",
+  "Kaygı seni korumaya çalışan bir alarm sistemidir. Bazen gereksiz çalar. Sen alarmın sahibisin, esiri değil.",
+  "Bugün kendine sormayı dene: 'Bu kaygı bana ne söylemeye çalışıyor?' Bazen bir mola, bazen bir plan ister.",
+  "Düşük kaygılı günleri de işaretle. Neyin seni sakinleştirdiğini görmek, zor günlerde sığınağın olur.",
+  "Kendini 10 üzerinden düşük puanlamak zorunda değilsin. Dürüst ol — bu ekran sadece senin için, kimse görmüyor.",
+  "Kaygı yükseldiğinde Psikoloji köşesindeki nefes egzersizlerinden birini dene. Birkaç dakika, gözle görülür fark.",
+];
+
+// ── Premium content config ───────────────────────────────────
+const PSYCH_COLORS = { kaygi:"#9d5cff", sinavGunu:"#ff4d94", nefes:"#10d99e", mukemmeliyetcilik:"#5c9bff", erteleme:"#ffb703" };
+// Free taster items (everything else is behind the paywall)
+const PSYCH_FREE = new Set(["kaygi-nedir", "kutu-nefesi"]);
+
 // ── Utils ────────────────────────────────────────────────────
 const pad   = n => String(n).padStart(2, "0");
-const today = () => new Date().toISOString().split("T")[0];
-
+// Gün anahtarı YEREL saate göre üretilir (UTC değil): gece 00:00-03:00 arasında
+// çalışan öğrencinin kaydı bir önceki güne yazılmasın.
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const today  = () => dayKey(new Date());
 function remaining(dateStr) {
   const diff = new Date(dateStr) - Date.now();
   if (diff <= 0) return { d:0, h:0, m:0, s:0, done:true };
@@ -237,18 +315,24 @@ function remaining(dateStr) {
     done: false,
   };
 }
-
 function anxColor(v) {
   if (!v) return "#1a1a2e";
-  if (v <= 3) return `rgba(6,214,160,${(0.3 + v * 0.2).toFixed(2)})`;
+  if (v <= 3) return `rgba(16,217,158,${(0.3 + v * 0.2).toFixed(2)})`;
   if (v <= 6) return `rgba(255,183,3,${(0.3 + (v-3) * 0.18).toFixed(2)})`;
-  return `rgba(255,0,110,${(0.35 + (v-6) * 0.13).toFixed(2)})`;
+  return `rgba(255,77,148,${(0.35 + (v-6) * 0.13).toFixed(2)})`;
 }
 function anxSolid(v) {
   if (!v) return "#444";
-  if (v <= 3) return "#06D6A0";
-  if (v <= 6) return "#FFB703";
-  return "#FF006E";
+  if (v <= 3) return "#10d99e";
+  if (v <= 6) return "#ffb703";
+  return "#ff4d94";
+}
+// Breathing phase from a step label (Turkish): "...al" = inhale, "...ver" = exhale, else hold
+function phaseOf(label) {
+  const l = (label || "").toLowerCase().trim();
+  if (l.endsWith("al"))  return "in";
+  if (l.endsWith("ver")) return "out";
+  return "hold";
 }
 
 // ── Root ─────────────────────────────────────────────────────
@@ -265,6 +349,18 @@ export default function App() {
   const [streak,    setStreak]    = useState(0);
   const [doneToday, setDoneToday] = useState(false);
   const [showBoom,  setShowBoom]  = useState(false);
+  // premium
+  const [isPremium,   setIsPremium]   = useState(DEV_PREMIUM);
+  const [psychOpen,   setPsychOpen]   = useState(false);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [purchasing,  setPurchasing]  = useState(false);
+  const [priceString, setPriceString] = useState(null);
+  const [psychDone,   setPsychDone]   = useState({});
+  // notifications & dialogs
+  const [notifOn,      setNotifOn]      = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const { toast, toastEl } = useToast();
+  const notifRefreshed = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -276,25 +372,50 @@ export default function App() {
       const st = await store.get("xb_studied");
       const sk = await store.get("xb_streak");
       const dt = await store.get("xb_doneday");
-
+      const pj = await store.get("xb_psych");
+      const nf = await store.get("xb_notif");
       const loadedGrade = g || "";
       setGrade(loadedGrade);
-
       // If hidden was never set, apply grade-based defaults
       if (hd) {
         try { setHidden(JSON.parse(hd)); } catch {}
       } else if (loadedGrade) {
         setHidden(defaultHidden(loadedGrade));
       }
-
       if (cu) try { setCustoms(JSON.parse(cu)); }  catch {}
       if (go) try { setGoals(JSON.parse(go)); }    catch {}
       if (an) try { setAnxiety(JSON.parse(an)); }  catch {}
-      if (st) try { setStudied(JSON.parse(st)); }  catch {}
-      if (sk) setStreak(parseInt(sk) || 0);
-      if (dt) try { if (JSON.parse(dt) === today()) setDoneToday(true); } catch {}
-
+      let studiedList = [];
+      if (st) try { studiedList = JSON.parse(st); setStudied(studiedList); } catch {}
+      // Seri: son çalışılan gün dünden eskiyse seri koptu → 0 göster
+      let effStreak = parseInt(sk) || 0;
+      if (effStreak > 0) {
+        const yest = new Date(); yest.setDate(yest.getDate() - 1);
+        const yd = dayKey(yest);
+        const last = studiedList.length ? studiedList[studiedList.length - 1] : null;
+        if (!last || (last < yd)) { effStreak = 0; store.set("xb_streak", "0"); }
+      }
+      setStreak(effStreak);
+      // xb_doneday is stored as a raw date string, not JSON — compare directly
+      if (dt && dt === today()) setDoneToday(true);
+      if (pj) try { setPsychDone(JSON.parse(pj)); } catch {}
+      // Bildirim tercihi + eski tek-bildirim sisteminden sessiz geçiş
+      if (nf === "1") setNotifOn(true);
+      else if (nf === null && isNative && await detectLegacyEnabled()) {
+        setNotifOn(true); store.set("xb_notif", "1");
+      }
       setLoaded(true);
+    })();
+  }, []);
+
+  // RevenueCat: configure + read entitlement once on mount (native only)
+  useEffect(() => {
+    if (DEV_PREMIUM) return;   // dev override: skip RC, stay premium
+    (async () => {
+      const ok = await rcConfigure();
+      if (!ok) return;
+      setIsPremium(await rcIsPremium());
+      setPriceString(await rcPriceString());
     })();
   }, []);
 
@@ -315,46 +436,35 @@ export default function App() {
     await store.set("xb_grade", g);
     await store.set("xb_hidden", dh);
   };
-
-
-  const logout = async () => {
+  const changeGrade = async () => {
     setGrade("");
     setTab("home");
     await store.set("xb_grade", "");
   };
-
   const resetAll = async () => {
-    if (!confirm("Tüm verileriniz silinecek. Emin misin?")) return;
-    for (const k of ["xb_grade","xb_hidden","xb_customs","xb_studied","xb_streak","xb_lastStudy","xb_anxiety","xb_goals","xb_chat_welcomed"]) {
+    for (const k of ["xb_grade","xb_hidden","xb_customs","xb_studied","xb_streak","xb_doneday","xb_lastStudy","xb_anxiety","xb_goals","xb_psych","xb_chat_welcomed","xb_notif"]) {
       await store.set(k, null);
     }
+    await cancelDailyNotifications();
     location.reload();
   };
-
-  const enableReminder = async () => {
-    const ok = await scheduleDaily();
-    if (ok) { tap("success"); alert("Her gün 20:00'de hatırlatma açıldı."); }
-  };
-
   const toggleHide = async id => {
     const n = hidden.includes(id) ? hidden.filter(x => x !== id) : [...hidden, id];
     setHidden(n);
     await store.set("xb_hidden", n);
   };
-
   const addExam = async ex => {
     const n = [...customs, ex]; setCustoms(n); await store.set("xb_customs", n);
   };
   const delExam = async id => {
     const n = customs.filter(e => e.id !== id); setCustoms(n); await store.set("xb_customs", n);
   };
-
   const markStudied = async () => {
     tap("success");
     if (doneToday) return;
     const d = today(), ns = [...studied, d];
     const yest = new Date(); yest.setDate(yest.getDate() - 1);
-    const yd = yest.toISOString().split("T")[0];
+    const yd = dayKey(yest);
     const ns2 = studied.includes(yd) ? streak + 1 : 1;
     setStudied(ns); setStreak(ns2); setDoneToday(true); setShowBoom(true);
     setTimeout(() => setShowBoom(false), 2600);
@@ -362,7 +472,6 @@ export default function App() {
     await store.set("xb_streak", String(ns2));
     await store.set("xb_doneday", today());
   };
-
   const rateAnxiety = async (day, val) => {
     const n = { ...anxiety, [day]: val }; setAnxiety(n); await store.set("xb_anxiety", n);
   };
@@ -378,68 +487,199 @@ export default function App() {
     const n = { ...goals, [day]: (goals[day] || []).filter(g => g.id !== id) };
     setGoals(n); await store.set("xb_goals", n);
   };
+  const togglePsychDay = async (pid, day) => {
+    const cur = psychDone[pid] || [];
+    const next = cur.includes(day) ? cur.filter(x => x !== day) : [...cur, day];
+    const n = { ...psychDone, [pid]: next };
+    setPsychDone(n); await store.set("xb_psych", n); tap();
+  };
 
-  if (!loaded) return <Splash />;
-  if (!grade)  return <Onboard onPick={saveGrade} />;
+  // ── Purchases ──
+  const buyPremium = async () => {
+    if (!isNative) { toast("Satın alma yalnızca uygulamada (App Store / Play) çalışır."); return; }
+    setPurchasing(true);
+    try {
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      const off = await Purchases.getOfferings();
+      const pkg = off?.current?.availablePackages?.[0];
+      if (!pkg) { toast("Ürün bulunamadı. Lütfen daha sonra tekrar dene."); setPurchasing(false); return; }
+      const res = await Purchases.purchasePackage({ aPackage: pkg });
+      if (res?.customerInfo?.entitlements?.active?.[ENTITLEMENT]) {
+        setIsPremium(true); setPaywallOpen(false); tap("success");
+        toast("Hoş geldin — artık Pro üyesin ✦");
+      }
+    } catch (e) {
+      if (!e?.userCancelled) toast("Satın alma tamamlanamadı.");
+    }
+    setPurchasing(false);
+  };
+  const restorePremium = async () => {
+    if (!isNative) { toast("Geri yükleme yalnızca uygulamada çalışır."); return; }
+    setPurchasing(true);
+    try {
+      const { Purchases } = await import("@revenuecat/purchases-capacitor");
+      const res = await Purchases.restorePurchases();
+      if (res?.customerInfo?.entitlements?.active?.[ENTITLEMENT]) {
+        setIsPremium(true); setPaywallOpen(false); tap("success");
+        toast("Premium geri yüklendi ✓");
+      } else {
+        toast("Geri yüklenecek bir satın alma bulunamadı.");
+      }
+    } catch { toast("Geri yükleme başarısız."); }
+    setPurchasing(false);
+  };
 
+  // ── Derived data (bildirim planı da bunları kullanır) ──
   const gradeInfo = GRADES.find(g => g.v === grade) || GRADES[0];
   // Deterministic daily pick cycling through all 100 messages
   const dayIndex  = Math.floor(Date.now() / 86400000);
   const motivText = MOTIV[dayIndex % MOTIV.length];
   const cbtTip    = CBT[dayIndex % CBT.length];
-  const visFixed  = FIXED.filter(e => !hidden.includes(e.id));
-  const allExams  = [...visFixed, ...customs.slice().sort((a, b) => new Date(a.date) - new Date(b.date))].filter(ex => new Date(ex.date) > Date.now());
+  // FIXED sınavlar kendini yenileyen sayaçtır → tarih filtresine takılmaz, hep görünür.
+  // Custom sınavlar tek seferlik → geçmişte kalanlar gizlenir.
+  const visFixed       = FIXED.filter(e => !hidden.includes(e.id));
+  const futureCustoms  = customs.slice().sort((a, b) => new Date(a.date) - new Date(b.date)).filter(ex => new Date(ex.date) > Date.now());
+  const allExams       = [...visFixed, ...futureCustoms];
+
+  const notifCtx = () => ({
+    exams: [
+      ...visFixed.map(ex => { const info = examInfoFor(ex); return info ? { name: ex.n, ms: info.ms } : null; }).filter(Boolean),
+      ...futureCustoms.map(ex => ({ name: ex.n, ms: new Date(ex.date).getTime() })),
+    ],
+    streak,
+  });
+
+  // Açılışta bildirim planını güncel geri sayım verisiyle tazele (izin istemez)
+  useEffect(() => {
+    if (!loaded || !isNative || notifRefreshed.current) return;
+    notifRefreshed.current = true;
+    refreshIfEnabled(notifOn, notifCtx());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, notifOn]);
+
+  const toggleNotif = async () => {
+    tap();
+    if (!isNative) { toast("Bildirimler yalnızca uygulamada çalışır."); return; }
+    if (notifOn) {
+      await cancelDailyNotifications();
+      setNotifOn(false); await store.set("xb_notif", "0");
+      toast("Günlük hatırlatma kapatıldı.");
+    } else {
+      const ok = await scheduleDailyNotifications(notifCtx());
+      if (ok) {
+        setNotifOn(true); await store.set("xb_notif", "1"); tap("success");
+        toast(`Her akşam ${NOTIF_HOUR}:00'de kısa bir hatırlatma alacaksın.`);
+      } else {
+        toast("Bildirim izni verilmedi. Ayarlar > Bildirimler'den açabilirsin.");
+      }
+    }
+  };
+
+  if (!loaded) return <Splash />;
+  if (!grade)  return <Onboard onPick={saveGrade} />;
 
   const TABS = [
-    ["home","🏠","Ana Sayfa"],
-    ["exams","📅","Sınavlar"],
-    ["goals","🎯","Hedefler"],
-    ["anxiety","😰","Kaygı"],
-    ["report","📊","Rapor"],
+    ["home",    IconHome,     "Ana Sayfa"],
+    ["exams",   IconCalendar, "Sınavlar"],
+    ["goals",   IconTarget,   "Hedefler"],
+    ["anxiety", IconPulse,    "Kaygı"],
+    ["report",  IconChart,    "Rapor"],
   ];
 
   return (
     <div style={S.root}>
-      <style>{CSS}</style>
-
       {showBoom && (
         <div style={S.boom}>
-          <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:88 }}>🔥</div>
-            <div style={{ fontFamily:"'Fredoka',sans-serif", fontSize:32, fontWeight:700, color:"#FFBE0B", marginTop:8 }}>SÜPERSİN!</div>
-            {streak > 1 && <div style={{ color:"#FF8C00", fontSize:20, marginTop:4 }}>{streak} günlük seri 🔥</div>}
+          <div style={{ textAlign:"center", animation:"popIn 0.45s ease" }}>
+            <div style={{
+              width:104, height:104, borderRadius:"50%", margin:"0 auto",
+              background:"radial-gradient(circle at 50% 35%, #2a1a00, #170e00)",
+              border:"1px solid #ff973655", display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow:"0 0 60px rgba(255,151,54,0.35)", color:"var(--orange)",
+            }}><IconFlame size={52} /></div>
+            <div style={{ fontSize:28, fontWeight:700, color:"var(--gold)", marginTop:16 }}>Süpersin!</div>
+            <div style={{ color:"var(--text-3)", fontSize:15, marginTop:6 }}>bugün de işini yaptın</div>
+            {streak > 1 && (
+              <div style={{
+                display:"inline-flex", alignItems:"center", gap:6, marginTop:14,
+                background:"#2a160033", border:"1px solid #ff973644", borderRadius:999,
+                padding:"7px 16px", color:"var(--orange)", fontSize:14, fontWeight:600,
+              }}><IconFlame size={16} /> {streak} günlük seri</div>
+            )}
           </div>
         </div>
       )}
-
-      <div style={S.header}>
-        <div>
-          <div style={S.logo}>Exam Bro 🎓</div>
-          <div style={S.headerSub}>{gradeInfo.e} {gradeInfo.l}</div>
+      <header style={S.header}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ color:"var(--violet)", display:"flex" }}><IconGraduation size={26} /></div>
+          <div>
+            <div style={S.logo}>Exam Bro</div>
+            <div style={S.headerSub}>{gradeInfo.e} {gradeInfo.l}</div>
+          </div>
         </div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-          {streak > 0 && <div style={S.streakBadge}>🔥 {streak}</div>}
-          <button style={S.outBtn} onClick={logout}>↩️</button>
+          {isPremium && <div style={S.proBadge}><IconSparkle size={13} /> PRO</div>}
+          {streak > 0 && (
+            <div style={S.streakBadge} aria-label={`${streak} günlük çalışma serisi`}>
+              <IconFlame size={15} /> <span className="num">{streak}</span>
+            </div>
+          )}
         </div>
-      </div>
-
-      <div style={S.scroll}>
-        {tab === "home"    && <HomeTab    motivText={motivText} cbt={cbtTip} doneToday={doneToday} streak={streak} onStudied={markStudied} exams={allExams} />}
+      </header>
+      <main style={S.scroll}>
+        {tab === "home"    && <HomeTab    motivText={motivText} cbt={cbtTip} doneToday={doneToday} streak={streak} onStudied={markStudied} exams={allExams} onOpenPsych={() => setPsychOpen(true)} isPremium={isPremium} />}
         {tab === "exams"   && <ExamsTab   grade={grade} hidden={hidden} onToggle={toggleHide} customs={customs} onAdd={addExam} onDel={delExam} />}
-        {tab === "goals"   && <GoalsTab   goals={goals} onAdd={addGoal} onToggle={toggleGoal} onDel={delGoal} />}
+        {tab === "goals"   && <GoalsTab   grade={grade} goals={goals} onAdd={addGoal} onToggle={toggleGoal} onDel={delGoal} />}
         {tab === "anxiety" && <AnxietyTab log={anxiety} onRate={rateAnxiety} />}
-        {tab === "report"  && <ReportTab  studied={studied} streak={streak} anxiety={anxiety} goals={goals} onReset={resetAll} onEnableReminder={enableReminder} />}
-      </div>
+        {tab === "report"  && <ReportTab  studied={studied} streak={streak} anxiety={anxiety} goals={goals}
+                                          onReset={() => setConfirmReset(true)}
+                                          notifOn={notifOn} onToggleNotif={toggleNotif}
+                                          onChangeGrade={changeGrade} gradeInfo={gradeInfo} />}
+      </main>
+      <nav style={S.nav} role="tablist" aria-label="Ana gezinme">
+        {TABS.map(([id, Icon, label]) => {
+          const active = tab === id;
+          return (
+            <button key={id} role="tab" aria-selected={active} aria-label={label}
+              style={S.navBtn} onClick={() => { if (!active) { tap(); setTab(id); } }}>
+              {active && <div style={S.navLine} />}
+              <span style={{ color: active ? "var(--violet)" : "var(--text-4)", display:"flex", transition:"color 0.2s" }}>
+                <Icon size={22} />
+              </span>
+              <span style={{ fontSize:10, fontWeight:600, color: active ? "var(--text-1)" : "var(--text-4)", transition:"color 0.2s" }}>{label}</span>
+            </button>
+          );
+        })}
+      </nav>
 
-      <div style={S.nav}>
-        {TABS.map(([id, emoji, label]) => (
-          <button key={id} style={S.navBtn} onClick={() => setTab(id)}>
-            {tab === id && <div style={S.navLine} />}
-            <span style={{ fontSize:22, filter:tab===id ? "none" : "grayscale(1) opacity(0.4)" }}>{emoji}</span>
-            <span style={{ fontSize:10, fontWeight:600, color:tab===id ? "#FFBE0B" : "#444", fontFamily:"'Fredoka',sans-serif" }}>{label}</span>
-          </button>
-        ))}
-      </div>
+      {psychOpen && (
+        <PsychologyHub
+          isPremium={isPremium}
+          psychDone={psychDone}
+          onToggleDay={togglePsychDay}
+          onClose={() => setPsychOpen(false)}
+          onRequirePremium={() => setPaywallOpen(true)}
+        />
+      )}
+      {paywallOpen && (
+        <Paywall
+          priceString={priceString}
+          purchasing={purchasing}
+          onBuy={buyPremium}
+          onRestore={restorePremium}
+          onClose={() => setPaywallOpen(false)}
+        />
+      )}
+      <ConfirmSheet
+        open={confirmReset}
+        title="Tüm veriler silinsin mi?"
+        body="Sınavların, hedeflerin, kaygı kayıtların ve çalışma serin kalıcı olarak silinir. Bu işlem geri alınamaz."
+        confirmLabel="Evet, hepsini sil"
+        danger
+        onConfirm={() => { setConfirmReset(false); resetAll(); }}
+        onCancel={() => setConfirmReset(false)}
+      />
+      {toastEl}
     </div>
   );
 }
@@ -447,10 +687,11 @@ export default function App() {
 // ── Splash ───────────────────────────────────────────────────
 function Splash() {
   return (
-    <div style={{ background:"#080810", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12 }}>
-      <style>{CSS}</style>
-      <div style={{ fontSize:56 }}>🎓</div>
-      <div style={{ color:"#8338EC", fontFamily:"monospace", fontSize:13, letterSpacing:2 }}>yükleniyor...</div>
+    <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
+      <div style={{ color:"var(--violet)", filter:"drop-shadow(0 0 20px rgba(157,92,255,0.5))" }}>
+        <IconGraduation size={56} />
+      </div>
+      <div style={{ fontSize:22, fontWeight:700, color:"var(--text-1)", letterSpacing:-0.3 }}>Exam Bro</div>
     </div>
   );
 }
@@ -458,109 +699,501 @@ function Splash() {
 // ── Onboard ──────────────────────────────────────────────────
 function Onboard({ onPick }) {
   return (
-    <div style={{ background:"#080810", minHeight:"100vh", fontFamily:"'Fredoka',sans-serif", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24 }}>
-      <style>{CSS}</style>
-      <div style={{ fontSize:72, filter:"drop-shadow(0 0 24px #8338ECAA)" }}>🎓</div>
-      <div style={{ fontSize:34, fontWeight:700, textAlign:"center", background:"linear-gradient(90deg,#8338EC,#FF006E)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginTop:8 }}>Exam Bro</div>
-      <div style={{ fontSize:15, color:"#666", margin:"8px 0 32px", textAlign:"center" }}>Kaçıncı sınıftasın?</div>
+    <div style={{ background:"var(--bg)", minHeight:"100vh", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"48px 24px" }} className="fadein">
+      <div style={{ color:"var(--violet)", filter:"drop-shadow(0 0 24px rgba(157,92,255,0.55))" }}>
+        <IconGraduation size={64} />
+      </div>
+      <h1 style={{ fontSize:32, fontWeight:700, textAlign:"center", background:"linear-gradient(90deg,#9d5cff,#ff4d94)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:"12px 0 0", letterSpacing:-0.5 }}>Exam Bro</h1>
+      <p style={{ fontSize:15, color:"var(--text-3)", margin:"10px 0 6px", textAlign:"center", lineHeight:1.6, maxWidth:300 }}>
+        Sınav geri sayımı, günlük hedefler ve kaygı takibi — hepsi tek yerde.
+      </p>
+      <p style={{ fontSize:14, color:"var(--text-4)", margin:"0 0 28px", textAlign:"center" }}>Başlamak için sınıfını seç:</p>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, width:"100%", maxWidth:360 }}>
         {GRADES.map(g => (
-          <button key={g.v} onClick={() => onPick(g.v)}
-            style={{ background:"#1a1a2e", border:"2px solid #252540", borderRadius:16, padding:"16px 8px", cursor:"pointer", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", gap:6, fontFamily:"'Fredoka',sans-serif" }}>
-            <span style={{ fontSize:28 }}>{g.e}</span>
-            <span style={{ fontSize:12, fontWeight:600 }}>{g.l}</span>
+          <button key={g.v} className="pressable" onClick={() => { tap(); onPick(g.v); }}
+            style={{ background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:16, padding:"16px 8px", cursor:"pointer", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+            <span style={{ fontSize:28 }} aria-hidden="true">{g.e}</span>
+            <span style={{ fontSize:12.5, fontWeight:600 }}>{g.l}</span>
           </button>
         ))}
       </div>
+      <p style={{ fontSize:12, color:"var(--text-4)", marginTop:24, textAlign:"center" }}>Sınıfını sonra Rapor sekmesinden değiştirebilirsin.</p>
     </div>
   );
 }
 
 // ── Home ─────────────────────────────────────────────────────
-function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams }) {
+function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPsych, isPremium }) {
   return (
     <div className="fadeup">
-      {/* Motivation — clean, no emoji spam */}
-      <div style={{ marginBottom:14, padding:"22px 24px", background:"#0f0f1a", border:"1px solid #1e1e35", borderRadius:20, borderLeft:"3px solid #8338EC" }}>
-        <div style={{ fontSize:10, color:"#8338EC", fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:12 }}>bugün</div>
-        <div style={{ fontSize:18, color:"#e0e0ff", lineHeight:1.6, fontStyle:"italic" }}>{motivText}</div>
+      {/* Motivation */}
+      <div style={{ marginBottom:14, padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--violet)" }}>
+        <SectionLabel style={{ color:"var(--violet)", marginBottom:10 }}>bugün</SectionLabel>
+        <div style={{ fontSize:17.5, color:"var(--text-1)", lineHeight:1.6, fontStyle:"italic" }}>{motivText}</div>
       </div>
-
       {/* Studied button */}
-      <button onClick={onStudied} style={{
+      <button className="pressable" onClick={onStudied} aria-label={doneToday ? "Bugün çalıştın" : "Bugün çalıştım olarak işaretle"} style={{
         width:"100%", marginBottom:14, padding:"17px 20px",
-        background: doneToday ? "linear-gradient(135deg,#0b3a1a,#0f4a22)" : "linear-gradient(135deg,#06D6A0,#059669)",
-        border: doneToday ? "2px solid #06D6A033" : "none",
-        borderRadius:20, color:"#fff", fontSize:19, fontWeight:700,
+        background: doneToday ? "rgba(16,217,158,0.10)" : "linear-gradient(135deg,#10d99e,#059669)",
+        border: doneToday ? "1px solid rgba(16,217,158,0.35)" : "none",
+        borderRadius:"var(--r-lg)", color: doneToday ? "var(--green)" : "#04120c", fontSize:18, fontWeight:700,
         cursor: doneToday ? "default" : "pointer",
-        fontFamily:"'Fredoka',sans-serif",
-        boxShadow: doneToday ? "none" : "0 8px 28px rgba(6,214,160,0.4)",
-        animation: doneToday ? "none" : "pulse 2s infinite",
+        boxShadow: doneToday ? "none" : "0 8px 28px rgba(16,217,158,0.35)",
         display:"flex", alignItems:"center", justifyContent:"center", gap:10,
       }}>
-        <span style={{ fontSize:26 }}>{doneToday ? "✅" : "💪"}</span>
-        {doneToday ? "bugün çalıştın." : "Bugün Çalıştım"}
+        <IconCheck size={22} />
+        {doneToday ? "Bugün çalıştın" : "Bugün Çalıştım"}
       </button>
-
       {/* Streak */}
       {streak > 1 && (
-        <Card style={{ marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center", background:"linear-gradient(135deg,#2a1200,#3d1a00)", borderColor:"#FF8C0033" }}>
+        <Card style={{ marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center", background:"linear-gradient(135deg,#1c0e00,#241300)", borderColor:"#ff973630" }}>
           <div>
-            <div style={{ fontSize:15, fontWeight:700, color:"#FF8C00" }}>seri devam ediyor</div>
-            <div style={{ fontSize:12, color:"#886633", marginTop:3 }}>bu tempoda devam et.</div>
+            <div style={{ fontSize:15, fontWeight:600, color:"var(--orange)", display:"flex", alignItems:"center", gap:7 }}>
+              <IconFlame size={17} /> seri devam ediyor
+            </div>
+            <div style={{ fontSize:13, color:"#9a7a52", marginTop:4 }}>bu tempoda devam et.</div>
           </div>
-          <div style={{ fontFamily:"'Space Mono',monospace", fontSize:38, fontWeight:700, color:"#FFBE0B" }}>{streak}</div>
+          <div className="num" style={{ fontSize:36, fontWeight:700, color:"var(--gold)" }}>{streak}</div>
         </Card>
       )}
-
       {/* Countdowns */}
       {exams.length === 0 ? (
-        <div style={{ textAlign:"center", color:"#333", padding:"36px 0", lineHeight:2.2 }}>
-          <div style={{ fontSize:44 }}>📅</div>
-          <div style={{ color:"#444", fontSize:14 }}>Sınavlar sekmesinden ekle.</div>
-        </div>
+        <EmptyState icon={<IconCalendar size={30} />} title="Henüz sayaç yok"
+          body="Sınavlar sekmesinden bir sınav seç ya da kendi sınavını ekle." />
       ) : (
         <>
-          <div style={S.label}>⏳ geri sayım</div>
+          <SectionLabel>geri sayım</SectionLabel>
           {exams.map(ex => <CountCard key={ex.id} ex={ex} />)}
         </>
       )}
+      {/* CBT — daily free tip, tappable to open the full Psikoloji hub */}
+      <button onClick={() => { tap(); onOpenPsych(); }} className="pressable" style={{
+        display:"block", width:"100%", textAlign:"left", cursor:"pointer", marginTop:8, marginBottom:4,
+        padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)",
+        borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--blue)", color:"inherit",
+      }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+          <SectionLabel style={{ color:"var(--blue)", marginBottom:0 }}>psikoloji köşesi</SectionLabel>
+          <span style={{ fontSize:12.5, color:"var(--blue)", fontWeight:600, display:"flex", alignItems:"center", gap:2 }}>
+            tümünü gör <IconChevronRight size={14} />
+          </span>
+        </div>
+        <div style={{ fontSize:22, marginBottom:8 }} aria-hidden="true">{cbt.i}</div>
+        <div style={{ fontSize:15.5, fontWeight:600, marginBottom:6, color:"var(--text-1)" }}>{cbt.t}</div>
+        <div style={{ fontSize:14, color:"var(--text-3)", lineHeight:1.65 }}>{cbt.b}</div>
+      </button>
+      {/* Premium teaser */}
+      {!isPremium && (
+        <button onClick={() => { tap(); onOpenPsych(); }} className="pressable" style={{
+          display:"flex", width:"100%", textAlign:"left", cursor:"pointer", marginTop:12,
+          padding:"16px 20px", background:"linear-gradient(135deg,#170f28,#1f1433)",
+          border:"1px solid rgba(157,92,255,0.3)", borderRadius:"var(--r-lg)", alignItems:"center", gap:14, color:"inherit",
+        }}>
+          <span style={{ color:"var(--violet)", display:"flex" }}><IconSparkle size={24} /></span>
+          <span style={{ flex:1 }}>
+            <span style={{ display:"block", fontSize:14.5, fontWeight:600, color:"#cbb2ff" }}>Psikoloji Programı — Pro</span>
+            <span style={{ display:"block", fontSize:12.5, color:"var(--text-3)", marginTop:3 }}>Kaygı modülleri, nefes egzersizleri, sınav günü rehberi</span>
+          </span>
+          <span style={{ color:"var(--violet)", display:"flex" }}><IconChevronRight size={18} /></span>
+        </button>
+      )}
+    </div>
+  );
+}
+function CountCard({ ex }) {
+  // FIXED sınav → config'ten canlı hedef (kendini yenileyen). Custom → kendi tarihi.
+  const info       = examInfoFor(ex);
+  const targetDate = info ? info.date : ex.date;
+  const isExamDay  = info ? info.isExamDay : false;
+  const isEstimate = info ? info.isEstimate : false;
+  const r          = remaining(targetDate);
+  const title      = isEstimate ? `${ex.n} (tahmini)` : ex.n;
+  return (
+    <div style={{
+      background:"var(--surface-2)", border:"1px solid var(--border-soft)",
+      borderLeft:`3px solid ${ex.c}`, borderRadius:"var(--r-lg)",
+      padding:"18px 20px", marginBottom:12,
+    }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:14 }}>
+        <div>
+          <div style={{ fontSize:20, fontWeight:700, color:ex.c, letterSpacing:-0.2 }}>{title}</div>
+          {ex.sub && <div style={{ fontSize:13, color:"var(--text-4)", marginTop:2 }}>{ex.sub}</div>}
+        </div>
+        {!isExamDay && !r.done && (
+          <div style={{ fontSize:12, color:"var(--text-4)" }}>
+            {targetDate instanceof Date
+              ? targetDate.toLocaleDateString("tr-TR",{ day:"numeric", month:"long" })
+              : new Date(targetDate).toLocaleDateString("tr-TR",{ day:"numeric", month:"long" })}
+          </div>
+        )}
+      </div>
+      {isExamDay ? (
+        <div style={{ fontSize:18, fontWeight:700, color:ex.c, padding:"4px 0" }}>Sınav günü! Başarılar 🍀</div>
+      ) : r.done ? (
+        <div style={{ fontSize:15, color:"var(--text-3)" }}>Sınav geçti 🎉</div>
+      ) : (
+        <div style={{ display:"flex", gap:8 }}>
+          {[["d","gün"],["h","saat"],["m","dk"],["s","sn"]].map(([k, lbl]) => (
+            <div key={k} style={{ flex:1, textAlign:"center" }}>
+              <div className="num" style={{
+                fontSize:22, fontWeight:700, color:ex.c,
+                background:`${ex.c}14`, border:`1px solid ${ex.c}22`,
+                borderRadius:"var(--r-sm)", padding:"8px 2px",
+              }}>{pad(r[k])}</div>
+              <div style={{ fontSize:10, color:"var(--text-4)", marginTop:6, letterSpacing:1, textTransform:"uppercase" }}>{lbl}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {isEstimate && !isExamDay && (
+        <div style={{ fontSize:11.5, color:"var(--text-4)", marginTop:12, lineHeight:1.5 }}>
+          ⓘ Tahmini tarih — ÖSYM/MEB resmi takvimi açıkladığında güncellenecektir.
+        </div>
+      )}
+    </div>
+  );
+}
 
-      {/* CBT — also toned down */}
-      <div style={{ marginTop:8, marginBottom:4, padding:"20px 22px", background:"#0d0d1f", border:"1px solid #1e1e35", borderRadius:20, borderLeft:"3px solid #3A86FF" }}>
-        <div style={{ fontSize:10, color:"#3A86FF", fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:12 }}>psikoloji köşesi</div>
-        <div style={{ fontSize:24, marginBottom:8 }}>{cbt.i}</div>
-        <div style={{ fontSize:15, fontWeight:600, marginBottom:6, color:"#c0c0ff" }}>{cbt.t}</div>
-        <div style={{ fontSize:14, color:"#777", lineHeight:1.65 }}>{cbt.b}</div>
+// ── Psychology Hub (premium) ─────────────────────────────────
+function PsychologyHub({ isPremium, psychDone, onToggleDay, onClose, onRequirePremium }) {
+  const [catId, setCatId] = useState(null);   // selected category
+  const [item,  setItem]  = useState(null);   // selected item
+
+  const openItem = (it) => {
+    if (!isPremium && !PSYCH_FREE.has(it.id)) { onRequirePremium(); return; }
+    tap(); setItem(it);
+  };
+
+  // Item detail view
+  if (item) {
+    const back = () => setItem(null);
+    if (item.type === "exercise") return <BreathingPlayer exercise={item} onClose={back} />;
+    if (item.type === "program")
+      return <ProgramView program={item} done={psychDone[item.id] || []} onToggle={(d) => onToggleDay(item.id, d)} onClose={back} />;
+    return <LessonReader lesson={item} onClose={back} />;
+  }
+
+  // Category item list
+  if (catId) {
+    const cat = premiumContent[catId];
+    const accent = PSYCH_COLORS[catId] || "#9d5cff";
+    return (
+      <div style={S.overlay}>
+        <HubBar title={`${cat.icon} ${cat.title}`} onBack={() => setCatId(null)} onClose={onClose} />
+        <div style={S.overlayScroll} className="fadeup">
+          <div style={{ fontSize:14, color:"var(--text-3)", lineHeight:1.6, marginBottom:18 }}>{cat.subtitle}</div>
+          {cat.items.map(it => {
+            const locked = !isPremium && !PSYCH_FREE.has(it.id);
+            const meta = it.type === "exercise" ? "Egzersiz" : it.type === "program" ? "5 günlük program" : `${it.readMin} dk okuma`;
+            const prog = it.type === "program" ? (psychDone[it.id] || []).length : 0;
+            return (
+              <button key={it.id} onClick={() => openItem(it)} className="pressable"
+                style={{ display:"flex", width:"100%", textAlign:"left", cursor:"pointer", background:"var(--surface-2)", border:`1px solid ${locked ? "var(--border)" : accent+"33"}`, borderRadius:16, padding:"17px 18px", marginBottom:10, alignItems:"center", gap:12, opacity:locked?0.72:1, color:"inherit" }}>
+                <span style={{ flex:1 }}>
+                  <span style={{ display:"block", fontSize:15.5, fontWeight:600, color: locked ? "var(--text-3)" : "var(--text-1)", lineHeight:1.35 }}>{it.title}</span>
+                  <span style={{ display:"block", fontSize:13, color:"var(--text-4)", marginTop:4 }}>
+                    {meta}{it.type === "program" && prog > 0 ? ` · ${prog}/${it.days.length} gün` : ""}
+                  </span>
+                </span>
+                <span style={{ color: locked ? "var(--violet)" : accent, display:"flex" }} aria-label={locked ? "Pro içerik" : undefined}>
+                  {locked ? <IconLock size={18} /> : <IconChevronRight size={18} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Category grid (hub home)
+  return (
+    <div style={S.overlay}>
+      <HubBar title="Psikoloji" onClose={onClose} />
+      <div style={S.overlayScroll} className="fadeup">
+        <div style={{ fontSize:14.5, color:"var(--text-3)", lineHeight:1.6, marginBottom:18 }}>
+          Sınav kaygısıyla başa çıkmak için Psk. Dilay Demirgan tarafından hazırlanan rehberler.
+        </div>
+        {premiumCategoryOrder.map(id => {
+          const cat = premiumContent[id];
+          const accent = PSYCH_COLORS[id] || "#9d5cff";
+          return (
+            <button key={id} onClick={() => { tap(); setCatId(id); }} className="pressable"
+              style={{ display:"flex", width:"100%", textAlign:"left", cursor:"pointer", background:`linear-gradient(135deg,${accent}12,transparent)`, border:`1px solid ${accent}30`, borderRadius:"var(--r-lg)", padding:"18px 18px", marginBottom:12, alignItems:"center", gap:14, color:"inherit" }}>
+              <span style={{ fontSize:30 }} aria-hidden="true">{cat.icon}</span>
+              <span style={{ flex:1 }}>
+                <span style={{ display:"block", fontSize:17, fontWeight:700, color:"var(--text-1)" }}>{cat.title}</span>
+                <span style={{ display:"block", fontSize:13.5, color:"var(--text-3)", marginTop:4, lineHeight:1.55 }}>{cat.subtitle}</span>
+              </span>
+              <span style={{ color:accent, display:"flex" }}><IconChevronRight size={18} /></span>
+            </button>
+          );
+        })}
+        <div style={{ textAlign:"center", color:"var(--text-4)", fontSize:12, lineHeight:1.7, margin:"22px 6px 8px" }}>
+          Bu içerikler genel bilgilendirme amaçlıdır ve profesyonel psikolojik desteğin yerini tutmaz.
+          Zorlandığını hissedersen güvendiğin bir yetişkine ya da bir uzmana danış.
+        </div>
       </div>
     </div>
   );
 }
 
-function CountCard({ ex }) {
-  const r = remaining(ex.date);
+function HubBar({ title, onBack, onClose }) {
   return (
-    <div style={{ background:`linear-gradient(135deg,${ex.c}18,${ex.c}06)`, border:`2px solid ${ex.c}30`, borderRadius:20, padding:20, marginBottom:12, position:"relative", overflow:"hidden" }}>
-      <div style={{ position:"absolute", top:-18, right:-14, fontSize:88, opacity:0.06, pointerEvents:"none" }}>{ex.em}</div>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:14 }}>
-        <div>
-          <div style={{ fontSize:22, fontWeight:700, color:ex.c }}>{ex.n}</div>
-          <div style={{ fontSize:13, color:"#555", marginTop:-2 }}>{ex.sub}</div>
-        </div>
-        <span style={{ fontSize:24 }}>{ex.em}</span>
+    <div style={S.hubBar}>
+      {onBack
+        ? <button onClick={onBack} className="pressable" style={S.hubBackBtn} aria-label="Geri">
+            <IconChevronLeft size={18} /> Geri
+          </button>
+        : <span style={{ width:84 }} />}
+      <div style={{ fontSize:18, fontWeight:600, color:"var(--text-1)", flex:1, textAlign:"center" }}>{title}</div>
+      <button onClick={onClose} className="pressable" style={S.hubCloseBtn} aria-label="Kapat"><IconX size={18} /></button>
+    </div>
+  );
+}
+
+// ── Lesson reader ────────────────────────────────────────────
+function LessonReader({ lesson, onClose }) {
+  return (
+    <div style={S.overlay}>
+      <HubBar title={`${lesson.readMin} dk okuma`} onBack={onClose} onClose={onClose} />
+      <div style={S.overlayScroll} className="fadeup">
+        <div style={{ fontSize:24, fontWeight:700, color:"var(--text-1)", lineHeight:1.3, marginBottom:18, letterSpacing:-0.3 }}>{lesson.title}</div>
+        {lesson.sections.map((s, i) => (
+          <div key={i} style={{ marginBottom:20 }}>
+            <div style={{ fontSize:16, fontWeight:600, color:"#c9b4ff", marginBottom:8 }}>{s.heading}</div>
+            <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.75 }}>{s.body}</div>
+          </div>
+        ))}
+        {lesson.takeaway && (
+          <div style={{ marginTop:8, padding:"16px 18px", background:"var(--surface-2)", borderLeft:"3px solid var(--violet)", borderRadius:12 }}>
+            <SectionLabel style={{ color:"var(--violet)", marginBottom:6 }}>aklında kalsın</SectionLabel>
+            <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.6, fontStyle:"italic" }}>{lesson.takeaway}</div>
+          </div>
+        )}
+        <button onClick={onClose} className="pressable" style={S.doneBtn}>Bitir ✓</button>
       </div>
-      {r.done ? (
-        <div style={{ fontSize:15, color:"#555" }}>Sınav geçti 🎉</div>
-      ) : (
-        <div style={{ display:"flex", gap:7 }}>
-          {[["d","GÜN"],["h","SAAT"],["m","DAK"],["s","SN"]].map(([k, lbl]) => (
-            <div key={k} style={{ flex:1, textAlign:"center" }}>
-              <div style={{ fontFamily:"'Space Mono',monospace", fontSize:22, fontWeight:700, color:ex.c, background:"rgba(0,0,0,0.32)", borderRadius:10, padding:"7px 2px" }}>{pad(r[k])}</div>
-              <div style={{ fontSize:9, color:"#555", marginTop:5, letterSpacing:1 }}>{lbl}</div>
+    </div>
+  );
+}
+
+// ── Breathing / guided exercise player ───────────────────────
+// Find the resting scale for a step: walk back to the last inhale/exhale
+function scaleForStep(steps, idx) {
+  for (let i = idx; i >= 0; i--) {
+    const p = phaseOf(steps[i].label);
+    if (p === "in")  return 1;
+    if (p === "out") return 0.45;
+  }
+  return 0.55;
+}
+
+function BreathingPlayer({ exercise, onClose }) {
+  const steps = exercise.steps;
+  const totalCycles = exercise.cycles || 1;
+  const selfPaced = !!exercise.selfPaced;
+  const [phase,   setPhase]   = useState("idle");  // idle | running | done
+  const [cycle,   setCycle]   = useState(1);
+  const [stepIdx, setStepIdx] = useState(0);
+  const [secLeft, setSecLeft] = useState(steps[0].sec);
+
+  const step = steps[stepIdx];
+  const transSec = step ? step.sec : 1;
+  const scale = phase === "running" ? scaleForStep(steps, stepIdx) : 0.55;
+
+  // Advance to the next step / cycle / finish. Resets secLeft in the SAME
+  // update so the countdown effect never sees a stale 0 (which caused skips).
+  const advance = () => {
+    if (stepIdx < steps.length - 1) {
+      const ni = stepIdx + 1;
+      setStepIdx(ni); setSecLeft(steps[ni].sec); tap();
+    } else if (cycle < totalCycles) {
+      setCycle(cycle + 1); setStepIdx(0); setSecLeft(steps[0].sec); tap();
+    } else {
+      setPhase("done"); tap("success");
+    }
+  };
+
+  // Single countdown timer. Depends only on phase + secLeft → no race.
+  useEffect(() => {
+    if (phase !== "running") return;
+    if (secLeft <= 0) { advance(); return; }
+    const id = setTimeout(() => setSecLeft(s => s - 1), 1000);
+    return () => clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, secLeft]);
+
+  const start   = () => { tap(); setCycle(1); setStepIdx(0); setSecLeft(steps[0].sec); setPhase("running"); };
+  const restart = () => { setPhase("idle"); };
+
+  return (
+    <div style={S.overlay}>
+      <HubBar title={exercise.title} onBack={onClose} onClose={onClose} />
+      <div style={{ ...S.overlayScroll, display:"flex", flexDirection:"column", alignItems:"center" }} className="fadeup">
+        {phase === "idle" && (
+          <>
+            <div style={{ fontSize:15, color:"var(--text-3)", lineHeight:1.7, textAlign:"center", margin:"6px 4px 26px" }}>{exercise.intro}</div>
+            <BreathCircle scale={0.55} transSec={1} centerTop={<IconWind size={40} />} centerBottom="" />
+            {exercise.note && <div style={{ fontSize:13, color:"var(--text-4)", lineHeight:1.6, textAlign:"center", margin:"26px 6px 0" }}>{exercise.note}</div>}
+            <button onClick={start} className="pressable" style={{ ...S.doneBtn, background:"linear-gradient(135deg,#10d99e,#059669)", color:"#04120c", maxWidth:280 }}>Başla ▶</button>
+          </>
+        )}
+
+        {phase === "running" && (
+          <>
+            <div style={{ fontSize:12, color:"var(--text-4)", letterSpacing:1.5, marginTop:6, marginBottom:24 }}>
+              {selfPaced ? `ADIM ${stepIdx + 1}/${steps.length}` : `TUR ${cycle}/${totalCycles}`}
+            </div>
+            <BreathCircle scale={scale} transSec={transSec} centerTop={<span className="num">{secLeft}</span>} centerBottom="sn" />
+            <div style={{ fontSize:22, fontWeight:600, color:"var(--text-1)", marginTop:30, textAlign:"center", minHeight:30 }}>{step.label}</div>
+            {selfPaced && (
+              <button onClick={advance} className="pressable" style={{ ...S.doneBtn, background:"linear-gradient(135deg,#10d99e,#059669)", color:"#04120c", maxWidth:280, marginTop:18 }}>
+                {stepIdx < steps.length - 1 ? "Sıradaki →" : "Bitir ✓"}
+              </button>
+            )}
+            <button onClick={onClose} className="pressable" style={{ ...S.doneBtn, background:"transparent", border:"1px solid var(--border)", color:"var(--text-3)", maxWidth:200, marginTop:selfPaced?10:24 }}>Durdur</button>
+          </>
+        )}
+
+        {phase === "done" && (
+          <div style={{ textAlign:"center", marginTop:30 }} className="fadein">
+            <div style={{ fontSize:56 }} aria-hidden="true">🌿</div>
+            <div style={{ fontSize:22, fontWeight:700, color:"var(--green)", marginTop:12 }}>Tamamlandı</div>
+            <div style={{ fontSize:14, color:"var(--text-3)", marginTop:8, lineHeight:1.6 }}>Bir an dur, nasıl hissettiğini fark et.</div>
+            <button onClick={restart} className="pressable" style={{ ...S.doneBtn, background:"transparent", border:"1px solid var(--border)", color:"var(--text-2)", maxWidth:240 }}>Tekrar yap</button>
+            <button onClick={onClose} className="pressable" style={{ ...S.doneBtn, background:"linear-gradient(135deg,#10d99e,#059669)", color:"#04120c", maxWidth:240, marginTop:10 }}>Bitir ✓</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+function BreathCircle({ scale, transSec, centerTop, centerBottom }) {
+  return (
+    <div style={{ width:240, height:240, display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+      <div style={{
+        position:"absolute", width:240, height:240, borderRadius:"50%",
+        background:"radial-gradient(circle, rgba(16,217,158,0.16), transparent 70%)",
+      }} />
+      <div style={{
+        width:200, height:200, borderRadius:"50%",
+        background:"radial-gradient(circle at 50% 40%, #0e5a44, #06281f)",
+        border:"2px solid rgba(16,217,158,0.35)",
+        boxShadow:"0 0 50px rgba(16,217,158,0.3)",
+        transform:`scale(${scale})`,
+        transition:`transform ${transSec}s ease-in-out`,
+        display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+        color:"#eafff7",
+      }}>
+        <div style={{ fontSize:46, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{centerTop}</div>
+        {centerBottom && <div style={{ fontSize:13, color:"#7fd9bf", marginTop:-2 }}>{centerBottom}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Program viewer (5-day guided program) ────────────────────
+function ProgramView({ program, done, onToggle, onClose }) {
+  const total = program.days.length;
+  const completed = done.length;
+  const pct = Math.round((completed / total) * 100);
+  return (
+    <div style={S.overlay}>
+      <HubBar title="Program" onBack={onClose} onClose={onClose} />
+      <div style={S.overlayScroll} className="fadeup">
+        <div style={{ fontSize:22, fontWeight:700, color:"var(--text-1)", lineHeight:1.3, marginBottom:10, letterSpacing:-0.3 }}>{program.title}</div>
+        <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.7, marginBottom:16 }}>{program.intro}</div>
+        <ProgressBar pct={pct} gradient="linear-gradient(90deg,var(--blue),var(--violet))" />
+        <div style={{ fontSize:12, color:"var(--text-4)", margin:"6px 0 20px" }}>{completed}/{total} gün tamamlandı</div>
+
+        {program.days.map(d => {
+          const isDone = done.includes(d.day);
+          return (
+            <div key={d.day} style={{ background:"var(--surface-2)", border:`1px solid ${isDone?"rgba(16,217,158,0.3)":"var(--border)"}`, borderRadius:16, padding:"16px 18px", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                <div className="num" style={{ fontSize:12.5, fontWeight:700, color:"var(--blue)", background:"#101830", borderRadius:8, padding:"3px 9px" }}>GÜN {d.day}</div>
+                <div style={{ fontSize:15, fontWeight:600, color:"var(--text-1)", flex:1 }}>{d.title}</div>
+              </div>
+              <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.7, marginBottom:12 }}>{d.body}</div>
+              <div style={{ padding:"12px 14px", background:"var(--surface-1)", borderLeft:"3px solid var(--amber)", borderRadius:10, marginBottom:12 }}>
+                <SectionLabel style={{ color:"var(--amber)", marginBottom:5 }}>bugünkü görev</SectionLabel>
+                <div style={{ fontSize:15, color:"var(--text-1)", lineHeight:1.6 }}>{d.task}</div>
+              </div>
+              <button onClick={() => onToggle(d.day)} className="pressable" style={{
+                width:"100%", padding:"12px", borderRadius:12, cursor:"pointer", fontSize:14, fontWeight:600,
+                background: isDone ? "rgba(16,217,158,0.10)" : "var(--surface-3)",
+                border: `1px solid ${isDone ? "var(--green)" : "var(--border)"}`,
+                color: isDone ? "var(--green)" : "var(--text-2)",
+                display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              }}>
+                {isDone && <IconCheck size={16} />}
+                {isDone ? "Tamamlandı" : "Tamamladım olarak işaretle"}
+              </button>
+            </div>
+          );
+        })}
+
+        {completed === total && program.closing && (
+          <div style={{ marginTop:4, padding:"18px 20px", background:"linear-gradient(135deg,#0b3a2a,#0e2a40)", border:"1px solid rgba(16,217,158,0.3)", borderRadius:16 }}>
+            <div style={{ fontSize:32, textAlign:"center", marginBottom:8 }} aria-hidden="true">🎉</div>
+            <div style={{ fontSize:15, color:"#dfffe9", lineHeight:1.7, textAlign:"center" }}>{program.closing}</div>
+          </div>
+        )}
+        <button onClick={onClose} className="pressable" style={S.doneBtn}>Kapat</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Paywall ──────────────────────────────────────────────────
+function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
+  const benefits = [
+    [<IconBook size={19} key="b" />,    "Kaygı modülleri",             "Düşünce tuzakları, kaygı dalgası, sınav anında kilitlenme"],
+    [<IconTarget size={19} key="t" />,  "Sınav günü rehberi",          "Önceki gece, sabah rutini, sınav anı stratejileri"],
+    [<IconWind size={19} key="w" />,    "Nefes & gevşeme",             "Süreli, rehberli nefes ve gevşeme egzersizleri"],
+    [<IconSparkle size={19} key="s" />, "Mükemmeliyetçilik programı",  "5 günlük rehberli mini program"],
+    [<IconClock size={19} key="c" />,   "Erteleme programı",           "5 günlük rehberli mini program"],
+  ];
+  return (
+    <div style={S.modalWrap} onClick={onClose}>
+      <div style={S.modalCard} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Exam Bro Pro">
+        <div style={{ width:36, height:4, borderRadius:999, background:"#2e2e46", margin:"0 auto 18px" }} />
+        <div style={{ textAlign:"center", marginBottom:6 }}>
+          <div style={{ color:"var(--violet)", display:"flex", justifyContent:"center" }}><IconSparkle size={36} /></div>
+          <div style={{ fontSize:23, fontWeight:700, color:"var(--text-1)", marginTop:8, letterSpacing:-0.3 }}>Exam Bro Pro</div>
+          <div style={{ fontSize:13.5, color:"var(--text-3)", marginTop:4 }}>Bir psikolog tarafından hazırlanan tüm içeriklere erişim</div>
+        </div>
+        <div style={{ margin:"18px 0" }}>
+          {benefits.map(([icon, t, s]) => (
+            <div key={t} style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:14, textAlign:"left" }}>
+              <span style={{
+                width:36, height:36, borderRadius:10, background:"rgba(157,92,255,0.12)",
+                border:"1px solid rgba(157,92,255,0.25)", color:"var(--violet)",
+                display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
+              }}>{icon}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:15, fontWeight:600, color:"var(--text-1)", lineHeight:1.3 }}>{t}</div>
+                <div style={{ fontSize:13, color:"var(--text-3)", marginTop:3, lineHeight:1.5 }}>{s}</div>
+              </div>
             </div>
           ))}
         </div>
-      )}
+        <div style={{ textAlign:"center", fontSize:13, color:"var(--text-3)", marginBottom:12 }}>
+          Tek seferlik ödeme · ömür boyu erişim · abonelik yok
+        </div>
+        <button onClick={onBuy} disabled={purchasing} className="pressable" style={{
+          width:"100%", padding:"15px", borderRadius:"var(--r-md)", border:"none", cursor:purchasing?"default":"pointer",
+          background:"linear-gradient(135deg,#9d5cff,#ff4d94)", color:"#fff", fontSize:16.5, fontWeight:700, opacity:purchasing?0.6:1,
+        }}>
+          {purchasing ? "İşleniyor..." : (priceString ? `${priceString} — Pro'ya Geç` : "Pro'ya Geç")}
+        </button>
+        <button onClick={onRestore} disabled={purchasing} className="pressable" style={{ width:"100%", marginTop:10, padding:"12px", borderRadius:12, background:"transparent", border:"1px solid var(--border)", color:"var(--text-3)", fontSize:13.5, cursor:"pointer" }}>
+          Satın alımı geri yükle
+        </button>
+        <button onClick={onClose} className="pressable" style={{ width:"100%", marginTop:8, padding:"10px", background:"none", border:"none", color:"var(--text-4)", fontSize:13.5, cursor:"pointer" }}>
+          Şimdi değil
+        </button>
+      </div>
     </div>
   );
 }
@@ -572,41 +1205,42 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
   const [date,  setDate]  = useState("");
   const [time,  setTime]  = useState("09:00");
   const [subj,  setSubj]  = useState("");
-
   const subjects = SUBJ[grade] || [];
   const cats     = [...new Set(OSYM.map(e => e.cat))];
   const isAdded  = id => customs.some(e => e.id === id);
-
   const handleAdd = () => {
     if (!name.trim() || !date) return;
-    onAdd({ id:`m_${Date.now()}`, n:name.trim(), sub:subj, date:`${date}T${time}:00`, c:"#FFBE0B", em:"✏️" });
+    onAdd({ id:`m_${Date.now()}`, n:name.trim(), sub:subj, date:`${date}T${time}:00`, c:"#ffbe0b" });
     setName(""); setDate(""); setTime("09:00"); setSubj(""); setView("list");
+    tap("success");
   };
-
   if (view === "osym") return (
     <div className="fadeup">
-      <BackBtn onClick={() => setView("list")} title="ÖSYM Takvimi 📋" />
-      <div style={{ fontSize:12, color:"#555", marginBottom:18 }}>Kaynak: ÖSYM 2026 Resmi Sınav Takvimi</div>
+      <BackBtn onClick={() => setView("list")} title="ÖSYM Takvimi" />
+      <div style={{ fontSize:12.5, color:"var(--text-4)", marginBottom:18 }}>Kaynak: ÖSYM 2026 Resmi Sınav Takvimi</div>
       {cats.map(cat => (
         <div key={cat}>
-          <div style={S.label}>{cat}</div>
+          <SectionLabel>{cat}</SectionLabel>
           {OSYM.filter(e => e.cat === cat).map(ex => {
             const r = remaining(ex.date);
             const added = isAdded(ex.id);
             return (
-              <Card key={ex.id} style={{ marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center", borderColor:added?"#06D6A033":undefined }}>
+              <Card key={ex.id} style={{ marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center", borderColor:added?"rgba(16,217,158,0.3)":undefined }}>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:700, fontSize:15, color:ex.c }}>{ex.em} {ex.n}</div>
-                  <div style={{ fontSize:12, color:"#666", marginTop:2 }}>{ex.sub}</div>
-                  <div style={{ fontSize:11, color:"#555", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
+                  <div style={{ fontWeight:600, fontSize:15, color:ex.c }}>{ex.n}</div>
+                  <div style={{ fontSize:12.5, color:"var(--text-3)", marginTop:2 }}>{ex.sub}</div>
+                  <div style={{ fontSize:11.5, color:"var(--text-4)", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-                  {!r.done && <div style={{ fontFamily:"'Space Mono',monospace", fontSize:12, color:ex.c }}>{r.d}g kaldı</div>}
-                  {r.done  && <div style={{ fontSize:12, color:"#555" }}>Geçti</div>}
-                  <button onClick={() => !added && onAdd({...ex})}
-                    style={{ background:added?"#06D6A018":"#252550", border:`1px solid ${added?"#06D6A0":"#3a3a5e"}`, color:added?"#06D6A0":"#aaa", borderRadius:10, padding:"5px 14px", cursor:added?"default":"pointer", fontSize:13, fontWeight:700, fontFamily:"'Fredoka',sans-serif", whiteSpace:"nowrap" }}>
-                    {added ? "✓ Eklendi" : "+ Ekle"}
-                  </button>
+                  {!r.done && <div className="num" style={{ fontSize:12, color:ex.c }}>{r.d}g kaldı</div>}
+                  {r.done  && <div style={{ fontSize:12, color:"var(--text-4)" }}>Geçti</div>}
+                  {!r.done && (
+                    <button onClick={() => { if (!added) { tap(); onAdd({...ex}); } }} className={added ? "" : "pressable"}
+                      aria-label={added ? `${ex.n} eklendi` : `${ex.n} sınavını ekle`}
+                      style={{ background:added?"rgba(16,217,158,0.10)":"var(--surface-3)", border:`1px solid ${added?"var(--green)":"var(--border)"}`, color:added?"var(--green)":"var(--text-2)", borderRadius:10, padding:"8px 14px", cursor:added?"default":"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:5 }}>
+                      {added ? <><IconCheck size={14} /> Eklendi</> : <><IconPlus size={14} /> Ekle</>}
+                    </button>
+                  )}
                 </div>
               </Card>
             );
@@ -615,82 +1249,90 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
       ))}
     </div>
   );
-
   if (view === "manual") return (
     <div className="fadeup">
-      <BackBtn onClick={() => setView("list")} title="Manuel Sınav Ekle ✏️" />
-      <input value={name} onChange={e => setName(e.target.value)} placeholder="Sınav adı (örn. Matematik Yazılı)" style={S.inp} />
+      <BackBtn onClick={() => setView("list")} title="Manuel Sınav Ekle" />
+      <input value={name} onChange={e => setName(e.target.value)} placeholder="Sınav adı (örn. Matematik Yazılı)" style={S.inp} aria-label="Sınav adı" />
       <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{...S.inp, flex:2, marginBottom:0, colorScheme:"dark"}} />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{...S.inp, flex:1, marginBottom:0, colorScheme:"dark"}} />
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{...S.inp, flex:2, marginBottom:0, colorScheme:"dark"}} aria-label="Sınav tarihi" />
+        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{...S.inp, flex:1, marginBottom:0, colorScheme:"dark"}} aria-label="Sınav saati" />
       </div>
-      <div style={{ fontSize:13, color:"#888", margin:"12px 0 8px" }}>Ders (opsiyonel):</div>
+      <div style={{ fontSize:13, color:"var(--text-3)", margin:"12px 0 8px" }}>Ders (opsiyonel):</div>
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
         {subjects.map(s => (
-          <button key={s} onClick={() => setSubj(subj === s ? "" : s)}
-            style={{ background:subj===s?"#8338EC":"#252540", border:"none", borderRadius:20, padding:"4px 12px", color:"#fff", fontSize:13, cursor:"pointer", fontFamily:"'Fredoka',sans-serif" }}>
+          <button key={s} onClick={() => { tap(); setSubj(subj === s ? "" : s); }} className="pressable"
+            style={{ background:subj===s?"var(--violet)":"var(--surface-3)", border:"1px solid " + (subj===s?"var(--violet)":"var(--border)"), borderRadius:20, padding:"8px 14px", color:subj===s?"#fff":"var(--text-2)", fontSize:13, cursor:"pointer", fontWeight:500 }}>
             {s}
           </button>
         ))}
       </div>
-      <input value={subjects.includes(subj) ? "" : subj} onChange={e => setSubj(e.target.value)} placeholder="Veya farklı bir şey yaz..." style={{...S.inp, marginBottom:16}} />
-      <button onClick={handleAdd} style={{ width:"100%", background:"linear-gradient(135deg,#FFBE0B,#FF8C00)", border:"none", borderRadius:14, padding:14, color:"#000", fontSize:17, fontWeight:700, cursor:"pointer", fontFamily:"'Fredoka',sans-serif" }}>Sınav Ekle ✓</button>
+      <input value={subjects.includes(subj) ? "" : subj} onChange={e => setSubj(e.target.value)} placeholder="Veya farklı bir şey yaz..." style={{...S.inp, marginBottom:16}} aria-label="Farklı ders" />
+      <button onClick={handleAdd} disabled={!name.trim() || !date} className="pressable" style={{
+        width:"100%", background: (!name.trim() || !date) ? "var(--surface-3)" : "linear-gradient(135deg,#ffbe0b,#ff9736)",
+        border:"none", borderRadius:"var(--r-md)", padding:15,
+        color: (!name.trim() || !date) ? "var(--text-4)" : "#1a1200",
+        fontSize:16.5, fontWeight:700, cursor: (!name.trim() || !date) ? "default" : "pointer",
+      }}>Sınav Ekle</button>
     </div>
   );
-
   return (
     <div className="fadeup">
-      <div style={S.pageTitle}>Sınavlarım 📅</div>
-      <div style={{ fontSize:14, color:"#666", marginBottom:18 }}>Görmek istediklerini seç, istediklerini ekle</div>
-
-      <div style={S.label}>Ulusal Sınavlar</div>
-      <div style={{ fontSize:12, color:"#555", marginBottom:12 }}>👁️ görünür &nbsp;·&nbsp; 🙈 gizli &nbsp;— tıkla değiştir</div>
+      <div style={S.pageTitle}>Sınavlarım</div>
+      <div style={S.pageSub}>Görmek istediklerini seç, istediklerini ekle</div>
+      <SectionLabel>Ulusal Sınavlar</SectionLabel>
+      <div style={{ fontSize:12.5, color:"var(--text-4)", marginBottom:12 }}>Karta dokunarak sayacı göster ya da gizle</div>
       {FIXED.map(ex => {
         const hide = hidden.includes(ex.id);
-        const r = remaining(ex.date);
+        const info = examInfoFor(ex);
+        const r = remaining(info ? info.date : ex.date);
         return (
-          <div key={ex.id} onClick={() => onToggle(ex.id)}
-            style={{ background:hide?"#111118":`linear-gradient(135deg,${ex.c}14,transparent)`, border:`1px solid ${hide?"#252530":ex.c+"30"}`, borderRadius:14, padding:"13px 16px", marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.45:1, transition:"all 0.2s" }}>
-            <div>
-              <div style={{ fontWeight:700, fontSize:16, color:hide?"#555":ex.c }}>{ex.em} {ex.n}</div>
-              <div style={{ fontSize:11, color:"#555", marginTop:3 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
-            </div>
-            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
-              {!r.done && !hide && <span style={{ fontFamily:"'Space Mono',monospace", fontSize:14, color:ex.c }}>{r.d}g</span>}
-              <span style={{ fontSize:22 }}>{hide ? "🙈" : "👁️"}</span>
-            </div>
-          </div>
+          <button key={ex.id} onClick={() => { tap(); onToggle(ex.id); }} className="pressable"
+            aria-pressed={!hide} aria-label={`${ex.n} sayacı ${hide ? "gizli" : "görünür"}`}
+            style={{ display:"flex", width:"100%", textAlign:"left", background:hide?"var(--surface-1)":`linear-gradient(135deg,${ex.c}12,transparent)`, border:`1px solid ${hide?"var(--border-soft)":ex.c+"30"}`, borderRadius:"var(--r-md)", padding:"14px 16px", marginBottom:8, justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.55:1, transition:"all 0.2s", color:"inherit" }}>
+            <span>
+              <span style={{ display:"block", fontWeight:600, fontSize:16, color:hide?"var(--text-4)":ex.c }}>{ex.n}{info?.isEstimate ? " (tahmini)" : ""}</span>
+              <span style={{ display:"block", fontSize:11.5, color:"var(--text-4)", marginTop:3 }}>{(info ? info.date : new Date(ex.date)).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</span>
+            </span>
+            <span style={{ display:"flex", gap:12, alignItems:"center" }}>
+              {info?.isExamDay && !hide && <span style={{ fontSize:13, color:ex.c, fontWeight:700 }}>bugün! 🍀</span>}
+              {!info?.isExamDay && !r.done && !hide && <span className="num" style={{ fontSize:14, color:ex.c }}>{r.d}g</span>}
+              <span style={{ color: hide ? "var(--text-4)" : "var(--text-2)", display:"flex" }}>
+                {hide ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+              </span>
+            </span>
+          </button>
         );
       })}
-
       {customs.length > 0 && (
         <>
-          <div style={{...S.label, color:"#FFBE0B", margin:"18px 0 10px"}}>Eklediğim Sınavlar</div>
+          <SectionLabel style={{ color:"var(--gold)", margin:"18px 0 10px" }}>Eklediğim Sınavlar</SectionLabel>
           {customs.map(ex => {
             const r = remaining(ex.date);
             return (
-              <Card key={ex.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <Card key={ex.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, padding:"13px 16px" }}>
                 <div>
-                  <div style={{ fontWeight:700, fontSize:15, color:ex.c||"#fff" }}>{ex.em} {ex.n}</div>
-                  {ex.sub && <div style={{ fontSize:12, color:"#888", marginTop:2 }}>{ex.sub}</div>}
-                  <div style={{ fontSize:11, color:"#555", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
+                  <div style={{ fontWeight:600, fontSize:15, color:ex.c||"var(--text-1)" }}>{ex.n}</div>
+                  {ex.sub && <div style={{ fontSize:12.5, color:"var(--text-3)", marginTop:2 }}>{ex.sub}</div>}
+                  <div style={{ fontSize:11.5, color:"var(--text-4)", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
                 </div>
-                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                  <span style={{ fontFamily:"'Space Mono',monospace", fontSize:14, color:ex.c||"#FFBE0B" }}>{r.done?"✓":`${r.d}g`}</span>
-                  <button onClick={() => onDel(ex.id)} style={{ background:"#FF006E22", border:"1px solid #FF006E44", color:"#FF006E", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontSize:13, fontFamily:"'Fredoka',sans-serif" }}>✕</button>
+                <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                  <span className="num" style={{ fontSize:14, color:ex.c||"var(--gold)" }}>{r.done?"✓":`${r.d}g`}</span>
+                  <button onClick={() => { tap(); onDel(ex.id); }} className="pressable" aria-label={`${ex.n} sınavını sil`}
+                    style={{ background:"transparent", border:"none", color:"#c04a6e", width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <IconTrash size={18} />
+                  </button>
                 </div>
               </Card>
             );
           })}
         </>
       )}
-
       <div style={{ display:"flex", gap:10, marginTop:18 }}>
-        <button onClick={() => setView("osym")} style={{ flex:1, background:"linear-gradient(135deg,#1a1428,#221a3a)", border:"2px solid #3a2a5e", borderRadius:14, padding:"14px 10px", color:"#a855f7", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Fredoka',sans-serif", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-          <span style={{ fontSize:26 }}>📋</span>ÖSYM Takvimi
+        <button onClick={() => { tap(); setView("osym"); }} className="pressable" style={{ flex:1, background:"var(--surface-2)", border:"1px solid rgba(157,92,255,0.35)", borderRadius:"var(--r-md)", padding:"16px 10px", color:"#b07aff", fontSize:14.5, fontWeight:600, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+          <IconCalendar size={24} />ÖSYM Takvimi
         </button>
-        <button onClick={() => setView("manual")} style={{ flex:1, background:"linear-gradient(135deg,#1a1a14,#2a2a18)", border:"2px dashed #FFBE0B55", borderRadius:14, padding:"14px 10px", color:"#FFBE0B", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"'Fredoka',sans-serif", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-          <span style={{ fontSize:26 }}>✏️</span>Manuel Ekle
+        <button onClick={() => { tap(); setView("manual"); }} className="pressable" style={{ flex:1, background:"var(--surface-2)", border:"1px dashed rgba(255,190,11,0.4)", borderRadius:"var(--r-md)", padding:"16px 10px", color:"var(--gold)", fontSize:14.5, fontWeight:600, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+          <IconPlus size={24} />Manuel Ekle
         </button>
       </div>
     </div>
@@ -698,55 +1340,72 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
 }
 
 // ── Goals ────────────────────────────────────────────────────
-function GoalsTab({ goals, onAdd, onToggle, onDel }) {
+function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
   const d = today();
   const [inp, setInp] = useState("");
+  const [focused, setFocused] = useState(false);
   const list = goals[d] || [];
   const done = list.filter(g => g.done).length;
   const pct  = list.length ? Math.round(done / list.length * 100) : 0;
-  const add  = () => { if (!inp.trim()) return; onAdd(d, inp.trim()); setInp(""); };
-
+  const add  = () => { if (!inp.trim()) return; onAdd(d, inp.trim()); setInp(""); tap(); };
+  const suggestions = goalSuggestions(grade);
+  // Henüz bugün eklenmemiş önerileri göster
+  const freshSuggestions = suggestions.filter(s => !list.some(g => g.text === s));
+  const showSuggestions = (focused || inp === "") && freshSuggestions.length > 0;
   return (
     <div className="fadeup">
-      <div style={S.pageTitle}>Günlük Hedefler 🎯</div>
-      <div style={{ fontSize:14, color:"#666", marginBottom:18 }}>Bugün ne yapacaksın?</div>
-
+      <div style={S.pageTitle}>Günlük Hedefler</div>
+      <div style={S.pageSub}>Bugün ne yapacaksın?</div>
       {list.length > 0 && (
         <Card style={{ marginBottom:16 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-            <span style={{ fontSize:14, fontWeight:600 }}>İlerleme</span>
-            <span style={{ fontSize:16, fontWeight:700, color:pct===100?"#06D6A0":pct>=50?"#FFBE0B":"#888" }}>{done}/{list.length} — %{pct}</span>
+            <span style={{ fontSize:14, fontWeight:600, color:"var(--text-2)" }}>İlerleme</span>
+            <span className="num" style={{ fontSize:15, fontWeight:700, color:pct===100?"var(--green)":pct>=50?"var(--gold)":"var(--text-3)" }}>{done}/{list.length} — %{pct}</span>
           </div>
-          <div style={{ background:"#252540", borderRadius:999, height:8, overflow:"hidden" }}>
-            <div style={{ background:"linear-gradient(90deg,#06D6A0,#3A86FF)", height:"100%", width:`${pct}%`, borderRadius:999, transition:"width 0.4s" }} />
-          </div>
-          {pct === 100 && <div style={{ textAlign:"center", color:"#06D6A0", fontWeight:600, fontSize:15, marginTop:10 }}>🎉 Hepsini bitirdin.</div>}
+          <ProgressBar pct={pct} />
+          {pct === 100 && <div style={{ textAlign:"center", color:"var(--green)", fontWeight:600, fontSize:15, marginTop:12 }}>🎉 Hepsini bitirdin.</div>}
         </Card>
       )}
-
       {list.map(g => (
-        <div key={g.id} style={{ background:"#1a1a2e", border:`1px solid ${g.done?"#06D6A033":"#252540"}`, borderRadius:14, padding:"13px 16px", marginBottom:8, display:"flex", alignItems:"center", gap:12 }}>
-          <button onClick={() => onToggle(d, g.id)} style={{ width:26, height:26, borderRadius:"50%", border:`2px solid ${g.done?"#06D6A0":"#444"}`, background:g.done?"#06D6A0":"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, transition:"all 0.2s" }}>
-            {g.done && <span style={{ color:"#000", fontSize:13, fontWeight:700 }}>✓</span>}
+        <div key={g.id} style={{ background:"var(--surface-3)", border:`1px solid ${g.done?"rgba(16,217,158,0.3)":"var(--border)"}`, borderRadius:"var(--r-md)", padding:"6px 6px 6px 8px", marginBottom:8, display:"flex", alignItems:"center", gap:4 }}>
+          <button onClick={() => { tap(); onToggle(d, g.id); }} aria-label={g.done ? `${g.text} — tamamlandı, geri al` : `${g.text} — tamamla`}
+            style={{ width:44, height:44, background:"transparent", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:0 }}>
+            <span style={{ width:26, height:26, borderRadius:"50%", border:`2px solid ${g.done?"var(--green)":"#3a3a58"}`, background:g.done?"var(--green)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", color:"#04120c" }}>
+              {g.done && <IconCheck size={15} />}
+            </span>
           </button>
-          <span style={{ flex:1, fontSize:15, textDecoration:g.done?"line-through":"none", color:g.done?"#555":"#fff" }}>{g.text}</span>
-          <button onClick={() => onDel(d, g.id)} style={{ background:"none", border:"none", color:"#333", cursor:"pointer", fontSize:18, lineHeight:1 }}>×</button>
+          <span style={{ flex:1, fontSize:15, textDecoration:g.done?"line-through":"none", color:g.done?"var(--text-4)":"var(--text-1)", padding:"10px 0" }}>{g.text}</span>
+          <button onClick={() => { tap(); onDel(d, g.id); }} aria-label={`${g.text} hedefini sil`}
+            style={{ background:"none", border:"none", color:"var(--text-4)", cursor:"pointer", width:44, height:44, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:0 }}>
+            <IconX size={16} />
+          </button>
         </div>
       ))}
-
-      <div style={{ display:"flex", gap:8, marginTop:8 }}>
-        <input value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
-          placeholder="Yeni hedef ekle..."
-          style={{ flex:1, background:"#1a1a2e", border:"1px solid #252540", borderRadius:12, padding:"13px 16px", color:"#fff", fontSize:15, fontFamily:"'Fredoka',sans-serif" }} />
-        <button onClick={add} style={{ background:"linear-gradient(135deg,#06D6A0,#059669)", border:"none", borderRadius:12, padding:"13px 18px", color:"#fff", fontSize:22, cursor:"pointer", fontWeight:700 }}>+</button>
-      </div>
-
-      {list.length === 0 && (
-        <div style={{ textAlign:"center", color:"#444", marginTop:40, lineHeight:2.2, fontSize:15 }}>
-          <div style={{ fontSize:48, marginBottom:8 }}>🎯</div>
-          Henüz hedef yok.<br />
-          <span style={{ color:"#333", fontSize:13 }}>Küçük bir şey bile yaz.</span>
+      {showSuggestions && (
+        <div style={{ marginTop:8, marginBottom:2 }}>
+          <div style={{ fontSize:11.5, color:"var(--text-4)", marginBottom:8, marginLeft:2 }}>öneriler · dokun, ekle</div>
+          <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+            {freshSuggestions.map(s => (
+              <button key={s} onMouseDown={e => { e.preventDefault(); onAdd(d, s); tap(); }} className="pressable"
+                style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:20, padding:"9px 14px", color:"#bdb3e0", fontSize:13, cursor:"pointer", fontWeight:500 }}>
+                + {s}
+              </button>
+            ))}
+          </div>
         </div>
+      )}
+      <div style={{ display:"flex", gap:8, marginTop:10 }}>
+        <input value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
+          onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)}
+          placeholder="Yeni hedef ekle..." aria-label="Yeni hedef"
+          style={{ flex:1, background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"13px 16px", color:"var(--text-1)", fontSize:15 }} />
+        <button onClick={add} className="pressable" aria-label="Hedefi ekle" style={{ background:"linear-gradient(135deg,#10d99e,#059669)", border:"none", borderRadius:"var(--r-sm)", width:52, color:"#04120c", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <IconPlus size={22} />
+        </button>
+      </div>
+      {list.length === 0 && (
+        <EmptyState style={{ marginTop:16 }} icon={<IconTarget size={30} />} title="Henüz hedef yok"
+          body="Küçük bir şey bile yaz — bir konu, 10 soru, kısa bir tekrar." />
       )}
     </div>
   );
@@ -756,75 +1415,82 @@ function GoalsTab({ goals, onAdd, onToggle, onDel }) {
 function AnxietyTab({ log, onRate }) {
   const d = today();
   const [val, setVal] = useState(log[d] || null);
-  const pick = v => { setVal(v); onRate(d, v); };
-
+  const pick = v => { tap(); setVal(v); onRate(d, v); };
+  const noteText = ANX_NOTES[Math.floor(Date.now() / 86400000) % ANX_NOTES.length];
   const days = [];
   for (let i = 34; i >= 0; i--) {
     const dt = new Date(); dt.setDate(dt.getDate() - i);
-    days.push(dt.toISOString().split("T")[0]);
+    days.push(dayKey(dt));
   }
-
+  const weekHeads = days.slice(0, 7).map(ds => new Date(ds).toLocaleDateString("tr-TR", { weekday:"narrow" }));
   const label = v => !v?"—":v<=3?"😊 sakin & odaklı":v<=6?"😐 orta seviye":v<=8?"😰 yoğun":"🆘 çok yüksek";
-
   return (
     <div className="fadeup">
-      <div style={S.pageTitle}>Kaygı Takibi 😰</div>
-      <div style={{ fontSize:14, color:"#666", marginBottom:18 }}>Duygusal örüntülerini keşfet</div>
-
+      <div style={S.pageTitle}>Kaygı Takibi</div>
+      <div style={S.pageSub}>Duygusal örüntülerini keşfet</div>
       <Card style={{ marginBottom:20 }}>
-        <div style={{ fontSize:15, fontWeight:600, marginBottom:14 }}>bugün nasıl hissediyorsun?</div>
-        <div style={{ display:"flex", gap:4, justifyContent:"space-between", marginBottom:14 }}>
-          {[1,2,3,4,5,6,7,8,9,10].map(v => (
-            <button key={v} onClick={() => pick(v)} style={{
-              flex:1, aspectRatio:"1", borderRadius:9, minWidth:0,
-              background: val===v ? anxColor(v) : "#252540",
-              border: `2px solid ${val===v ? anxSolid(v) : "#252540"}`,
-              color:"#fff", fontSize:14, fontWeight:700,
-              cursor:"pointer", fontFamily:"'Fredoka',sans-serif",
-              transform: val===v ? "scale(1.18)" : "scale(1)",
-              transition:"all 0.15s",
-              boxShadow: val===v ? `0 4px 14px ${anxColor(v)}` : "none",
-            }}>{v}</button>
+        <div style={{ fontSize:15, fontWeight:600, marginBottom:14, color:"var(--text-1)" }}>bugün nasıl hissediyorsun?</div>
+        <div role="radiogroup" aria-label="Kaygı seviyesi, 1 sakin, 10 çok yüksek">
+          {[[1,2,3,4,5],[6,7,8,9,10]].map((row, ri) => (
+            <div key={ri} style={{ display:"flex", gap:6, marginBottom:6 }}>
+              {row.map(v => (
+                <button key={v} role="radio" aria-checked={val===v} aria-label={`${v}`} onClick={() => pick(v)} style={{
+                  flex:1, height:48, borderRadius:"var(--r-sm)", minWidth:0,
+                  background: val===v ? anxColor(v) : "#20203a",
+                  border: `2px solid ${val===v ? anxSolid(v) : "transparent"}`,
+                  color: val===v ? "#fff" : "var(--text-3)", fontSize:15, fontWeight:700,
+                  cursor:"pointer",
+                  transform: val===v ? "scale(1.06)" : "scale(1)",
+                  transition:"all 0.15s",
+                  boxShadow: val===v ? `0 4px 14px ${anxColor(v)}` : "none",
+                }} className="num">{v}</button>
+              ))}
+            </div>
           ))}
         </div>
         {val
-          ? <div style={{ textAlign:"center", fontSize:16, fontWeight:600, color:anxSolid(val), padding:10, background:`${anxColor(val)}33`, borderRadius:12 }}>{label(val)}</div>
-          : <div style={{ textAlign:"center", fontSize:13, color:"#555" }}>1 = tamamen sakin &nbsp;|&nbsp; 10 = çok yüksek kaygı</div>
+          ? <div style={{ textAlign:"center", fontSize:16, fontWeight:600, color:anxSolid(val), padding:10, background:`${anxColor(val)}33`, borderRadius:12, marginTop:8 }}>{label(val)}</div>
+          : <div style={{ textAlign:"center", fontSize:13, color:"var(--text-4)", marginTop:8 }}>1 = tamamen sakin &nbsp;·&nbsp; 10 = çok yüksek kaygı</div>
         }
       </Card>
-
       <div style={{ display:"flex", gap:16, marginBottom:14, fontSize:12 }}>
-        {[["#06D6A0","1–3 Sakin"],["#FFB703","4–6 Orta"],["#FF006E","7–10 Yüksek"]].map(([c,l]) => (
-          <div key={l} style={{ display:"flex", alignItems:"center", gap:5, color:"#888" }}>
+        {[["#10d99e","1–3 Sakin"],["#ffb703","4–6 Orta"],["#ff4d94","7–10 Yüksek"]].map(([c,l]) => (
+          <div key={l} style={{ display:"flex", alignItems:"center", gap:5, color:"var(--text-3)" }}>
             <div style={{ width:11, height:11, borderRadius:3, background:c }} />{l}
           </div>
         ))}
       </div>
-
-      <div style={S.label}>son 35 gün</div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5, marginTop:10 }}>
+      <SectionLabel>son 35 gün</SectionLabel>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5, marginBottom:6 }}>
+        {weekHeads.map((w, i) => (
+          <div key={i} style={{ textAlign:"center", fontSize:10, color:"var(--text-4)", fontWeight:600 }}>{w}</div>
+        ))}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5 }}>
         {days.map(ds => (
-          <div key={ds} style={{ aspectRatio:"1", borderRadius:7, background:anxColor(log[ds]||null), border:ds===d?"2px solid #ffffff55":"1px solid #1a1a3e", position:"relative" }}>
-            {ds === d && <div style={{ position:"absolute", bottom:1, right:1, width:5, height:5, background:"#FFBE0B", borderRadius:"50%" }} />}
+          <div key={ds} title={ds} style={{ aspectRatio:"1", borderRadius:7, background:anxColor(log[ds]||null), border:ds===d?"2px solid rgba(255,255,255,0.4)":"1px solid #1a1a3e", position:"relative" }}>
+            {ds === d && <div style={{ position:"absolute", bottom:2, right:2, width:5, height:5, background:"var(--gold)", borderRadius:"50%" }} />}
           </div>
         ))}
       </div>
-      <div style={{ textAlign:"center", marginTop:10, fontSize:11, color:"#444" }}>her kare 1 gün · ton sürton 🎨</div>
+      <div style={{ textAlign:"center", marginTop:10, fontSize:11.5, color:"var(--text-4)" }}>her kare bir gün — bugün sağ altta işaretli</div>
+      <div style={{ marginTop:20, padding:"18px 20px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--green)" }}>
+        <SectionLabel style={{ color:"var(--green)" }}>günün notu</SectionLabel>
+        <div style={{ fontSize:14, color:"var(--text-2)", lineHeight:1.7 }}>{noteText}</div>
+      </div>
     </div>
   );
 }
 
 // ── Report ───────────────────────────────────────────────────
-function ReportTab({ studied, streak, anxiety, goals, onReset, onEnableReminder }) {
+function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggleNotif, onChangeGrade, gradeInfo }) {
   const now  = new Date();
-  const week = Array.from({length:7}, (_, i) => { const d = new Date(now); d.setDate(now.getDate()-6+i); return d.toISOString().split("T")[0]; });
-
+  const week = Array.from({length:7}, (_, i) => { const d = new Date(now); d.setDate(now.getDate()-6+i); return dayKey(d); });
   const studiedW = week.filter(d => studied.includes(d)).length;
   const anxVals  = week.map(d => anxiety[d]).filter(Boolean);
   const avgAnx   = anxVals.length ? (anxVals.reduce((a,b)=>a+b,0)/anxVals.length).toFixed(1) : null;
   const todayG   = goals[today()] || [];
   const donePct  = todayG.length ? Math.round(todayG.filter(g=>g.done).length/todayG.length*100) : null;
-
   const [msg, detail] = studiedW>=5
     ? ["bu hafta iyi geçti.","Zirvede uçuyorsun. Böyle devam et."]
     : studiedW>=3
@@ -832,110 +1498,160 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, onEnableReminder 
     : studiedW>=1
     ? ["başladın.","Bu önemli. Haftaya daha fazlasını yapabilirsin."]
     : ["henüz başlamadın.","Yarın sadece 20 dakika. O kadar."];
-
   return (
     <div className="fadeup">
-      <div style={S.pageTitle}>Haftalık Rapor 📊</div>
-      <div style={{ fontSize:14, color:"#666", marginBottom:18 }}>son 7 günün özeti</div>
-
+      <div style={S.pageTitle}>Haftalık Rapor</div>
+      <div style={S.pageSub}>son 7 günün özeti</div>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:18 }}>
-        <Stat emoji="📚" label="Çalışılan Gün" value={`${studiedW}/7`}   color="#06D6A0" />
-        <Stat emoji="🔥" label="Seri"           value={`${streak} gün`}  color="#FF8C00" />
-        <Stat emoji="😰" label="Ort. Kaygı"     value={avgAnx?`${avgAnx}/10`:"—"} color={avgAnx?anxSolid(parseFloat(avgAnx)):"#555"} />
-        <Stat emoji="🎯" label="Bugün Hedef"    value={donePct!=null?`%${donePct}`:"—"} color="#8338EC" />
+        <Stat icon={<IconBook size={20} />}  label="Çalışılan Gün" value={`${studiedW}/7`}   color="var(--green)" />
+        <Stat icon={<IconFlame size={20} />} label="Seri"          value={`${streak} gün`}   color="var(--orange)" />
+        <Stat icon={<IconPulse size={20} />} label="Ort. Kaygı"    value={avgAnx?`${avgAnx}/10`:"—"} color={avgAnx?anxSolid(parseFloat(avgAnx)):"var(--text-4)"} />
+        <Stat icon={<IconTarget size={20} />} label="Bugün Hedef"  value={donePct!=null?`%${donePct}`:"—"} color="var(--violet)" />
       </div>
-
       <Card style={{ marginBottom:14 }}>
-        <div style={{ fontWeight:700, marginBottom:14, color:"#bbb" }}>bu hafta çalışma</div>
+        <div style={{ fontWeight:600, marginBottom:14, color:"var(--text-2)", fontSize:14.5 }}>bu hafta çalışma</div>
         <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:60 }}>
           {week.map(d => {
             const s=studied.includes(d), isT=d===today();
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div style={{ width:"100%", background:s?"linear-gradient(180deg,#06D6A0,#04a07a)":"#252540", borderRadius:5, height:s?48:8, transition:"height 0.3s", border:isT?"2px solid #FFBE0B":"none" }} />
-                <div style={{ fontSize:10, color:isT?"#FFBE0B":"#555", fontWeight:isT?700:400 }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
+                <div style={{ width:"100%", background:s?"linear-gradient(180deg,#10d99e,#04a07a)":"#22223a", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
+                <div style={{ fontSize:10, color:isT?"var(--gold)":"var(--text-4)", fontWeight:isT?700:400 }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
           })}
         </div>
       </Card>
-
       <Card style={{ marginBottom:14 }}>
-        <div style={{ fontWeight:700, marginBottom:14, color:"#bbb" }}>bu hafta kaygı</div>
+        <div style={{ fontWeight:600, marginBottom:14, color:"var(--text-2)", fontSize:14.5 }}>bu hafta kaygı</div>
         <div style={{ display:"flex", gap:6, alignItems:"flex-end", height:60 }}>
           {week.map(d => {
             const v = anxiety[d];
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div style={{ width:"100%", background:v?anxColor(v):"#252540", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
-                <div style={{ fontSize:10, color:"#555" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
+                <div style={{ width:"100%", background:v?anxColor(v):"#22223a", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
+                <div style={{ fontSize:10, color:"var(--text-4)" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
           })}
         </div>
       </Card>
-
-      <div style={{ padding:"20px 22px", background:"#0d0d1f", border:"1px solid #1e1e35", borderRadius:20, borderLeft:"3px solid #8338EC" }}>
-        <div style={{ fontSize:18, fontWeight:700, marginBottom:8, color:"#e0e0ff" }}>{msg}</div>
-        <div style={{ fontSize:14, color:"#666", lineHeight:1.65 }}>{detail}</div>
+      <div style={{ padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--violet)", marginBottom:24 }}>
+        <div style={{ fontSize:18, fontWeight:700, marginBottom:8, color:"var(--text-1)" }}>{msg}</div>
+        <div style={{ fontSize:14, color:"var(--text-3)", lineHeight:1.65 }}>{detail}</div>
       </div>
 
-      <div style={{ marginTop:36, display:"flex", flexDirection:"column", gap:10, alignItems:"center" }}>
-        <button onClick={onEnableReminder} style={{ background:"transparent", border:"1px solid #2a2540", color:"#888", padding:"10px 18px", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'Fredoka',sans-serif" }}>🔔 Günlük hatırlatmayı aç</button>
-        <button onClick={onReset} style={{ background:"transparent", border:"1px solid #3a1a2a", color:"#8a3a4a", padding:"10px 18px", borderRadius:10, fontSize:12, cursor:"pointer", fontFamily:"'Fredoka',sans-serif", letterSpacing:0.5 }}>Tüm verileri sıfırla</button>
-      </div>
+      {/* ── Ayarlar ── */}
+      <SectionLabel>ayarlar</SectionLabel>
+      <Card style={{ padding:"4px 0", marginBottom:20 }}>
+        <SettingsRow
+          icon={<IconBell size={19} />}
+          title="Günlük hatırlatma"
+          sub={notifOn ? "Her akşam 20:00 · içerik her gün değişir" : "Kapalı"}
+          right={<ToggleSwitch on={notifOn} />}
+          onClick={onToggleNotif}
+          ariaLabel={notifOn ? "Günlük hatırlatmayı kapat" : "Günlük hatırlatmayı aç"}
+        />
+        <div style={S.divider} />
+        <SettingsRow
+          icon={<IconSwap size={19} />}
+          title="Sınıfı değiştir"
+          sub={`Şu an: ${gradeInfo.l}`}
+          right={<span style={{ color:"var(--text-4)", display:"flex" }}><IconChevronRight size={17} /></span>}
+          onClick={() => { tap(); onChangeGrade(); }}
+          ariaLabel="Sınıfı değiştir"
+        />
+        <div style={S.divider} />
+        <SettingsRow
+          icon={<IconTrash size={19} />}
+          title="Tüm verileri sıfırla"
+          sub="Geri alınamaz"
+          danger
+          onClick={() => { tap(); onReset(); }}
+          ariaLabel="Tüm verileri sıfırla"
+        />
+      </Card>
     </div>
   );
 }
 
-// ── Shared UI ────────────────────────────────────────────────
-function Card({ children, style }) {
-  return <div style={{ background:"#1a1a2e", border:"1px solid #252540", borderRadius:18, padding:18, ...style }}>{children}</div>;
-}
-function Stat({ emoji, label, value, color }) {
+function SettingsRow({ icon, title, sub, right, onClick, danger, ariaLabel }) {
   return (
-    <div style={{ background:"#1a1a2e", borderRadius:16, padding:"16px 14px", textAlign:"center" }}>
-      <div style={{ fontSize:26 }}>{emoji}</div>
-      <div style={{ fontFamily:"'Space Mono',monospace", fontSize:22, fontWeight:700, color, marginTop:4 }}>{value}</div>
-      <div style={{ fontSize:12, color:"#666", marginTop:3 }}>{label}</div>
+    <button onClick={onClick} aria-label={ariaLabel} className="pressable" style={{
+      display:"flex", width:"100%", alignItems:"center", gap:14, padding:"14px 18px",
+      background:"transparent", border:"none", cursor:"pointer", textAlign:"left", color:"inherit",
+    }}>
+      <span style={{ color: danger ? "#e5375f" : "var(--text-3)", display:"flex", flexShrink:0 }}>{icon}</span>
+      <span style={{ flex:1 }}>
+        <span style={{ display:"block", fontSize:15, fontWeight:500, color: danger ? "#e5375f" : "var(--text-1)" }}>{title}</span>
+        {sub && <span style={{ display:"block", fontSize:12.5, color:"var(--text-4)", marginTop:2 }}>{sub}</span>}
+      </span>
+      {right}
+    </button>
+  );
+}
+function ToggleSwitch({ on }) {
+  return (
+    <span aria-hidden="true" style={{
+      width:46, height:28, borderRadius:999, flexShrink:0, position:"relative",
+      background: on ? "var(--green)" : "#2c2c48", transition:"background 0.2s",
+      display:"inline-block",
+    }}>
+      <span style={{
+        position:"absolute", top:3, left: on ? 21 : 3, width:22, height:22,
+        borderRadius:"50%", background:"#fff", transition:"left 0.2s",
+        boxShadow:"0 1px 4px rgba(0,0,0,0.4)",
+      }} />
+    </span>
+  );
+}
+
+// ── Shared UI ────────────────────────────────────────────────
+function Stat({ icon, label, value, color }) {
+  return (
+    <div style={{ background:"var(--surface-2)", border:"1px solid var(--border-soft)", borderRadius:16, padding:"16px 14px", textAlign:"center" }}>
+      <div style={{ color, display:"flex", justifyContent:"center" }}>{icon}</div>
+      <div className="num" style={{ fontSize:21, fontWeight:700, color, marginTop:8 }}>{value}</div>
+      <div style={{ fontSize:12, color:"var(--text-4)", marginTop:3 }}>{label}</div>
     </div>
   );
 }
 function BackBtn({ onClick, title }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
-      <button onClick={onClick} style={{ background:"#1a1a2e", border:"1px solid #252540", color:"#aaa", padding:"6px 14px", borderRadius:10, cursor:"pointer", fontSize:14, fontFamily:"'Fredoka',sans-serif" }}>← Geri</button>
-      <div style={{ fontSize:19, fontWeight:700 }}>{title}</div>
+      <button onClick={onClick} className="pressable" aria-label="Geri" style={{ background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--text-2)", padding:"9px 14px 9px 10px", borderRadius:"var(--r-sm)", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", gap:4, fontWeight:500 }}>
+        <IconChevronLeft size={16} /> Geri
+      </button>
+      <div style={{ fontSize:19, fontWeight:700, color:"var(--text-1)" }}>{title}</div>
     </div>
   );
 }
 
-// ── Styles & CSS ─────────────────────────────────────────────
+// ── Styles ───────────────────────────────────────────────────
 const S = {
-  root:       { background:"#080810", minHeight:"100vh", fontFamily:"'Fredoka',sans-serif", color:"#fff", paddingBottom:"calc(84px + env(safe-area-inset-bottom))", maxWidth:480, margin:"0 auto", position:"relative" },
-  header:     { padding:"18px 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"#080810", zIndex:10, borderBottom:"1px solid #12121e" },
-  logo:       { fontSize:26, fontWeight:700, background:"linear-gradient(90deg,#8338EC,#FF006E,#FFBE0B)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", letterSpacing:-0.5 },
-  headerSub:  { fontSize:12, color:"#666", marginTop:-2 },
-  streakBadge:{ background:"linear-gradient(135deg,#7a2d00,#b34500)", borderRadius:20, padding:"4px 12px", fontSize:14, fontWeight:700, border:"1px solid #FF8C00" },
-  outBtn:     { background:"#1a1a2e", border:"1px solid #252540", color:"#888", padding:"6px 10px", borderRadius:10, cursor:"pointer", fontSize:15, fontFamily:"'Fredoka',sans-serif" },
+  root:       { background:"var(--bg)", minHeight:"100vh", color:"var(--text-1)", paddingBottom:"calc(84px + env(safe-area-inset-bottom))", maxWidth:480, margin:"0 auto", position:"relative" },
+  header:     { padding:"calc(16px + env(safe-area-inset-top)) 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"rgba(8,8,16,0.92)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", zIndex:10, borderBottom:"1px solid var(--border-soft)" },
+  logo:       { fontSize:21, fontWeight:700, background:"linear-gradient(90deg,#b98aff,#ff7ab0)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", letterSpacing:-0.4, lineHeight:1.15 },
+  headerSub:  { fontSize:12, color:"var(--text-4)", marginTop:1 },
+  proBadge:   { background:"linear-gradient(135deg,#9d5cff,#ff4d94)", borderRadius:20, padding:"5px 10px", fontSize:11.5, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", gap:4 },
+  streakBadge:{ background:"rgba(255,151,54,0.12)", borderRadius:20, padding:"5px 12px", fontSize:14, fontWeight:700, border:"1px solid rgba(255,151,54,0.4)", color:"var(--orange)", display:"flex", alignItems:"center", gap:5 },
   scroll:     { padding:"14px 16px 0" },
-  nav:        { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(10,10,20,0.96)", borderTop:"1px solid #1a1a2e", display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)", backdropFilter:"blur(12px)" },
-  navBtn:     { flex:1, background:"none", border:"none", padding:"10px 4px 8px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:2, position:"relative" },
-  navLine:    { position:"absolute", top:0, left:"20%", right:"20%", height:2, background:"linear-gradient(90deg,#8338EC,#FF006E)", borderRadius:999 },
-  boom:       { position:"fixed", inset:0, zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(0,0,0,0.78)", pointerEvents:"none", animation:"boomFade 2.6s forwards" },
-  label:      { fontSize:10, color:"#8338EC", fontWeight:700, textTransform:"uppercase", letterSpacing:2, marginBottom:10 },
-  pageTitle:  { fontSize:22, fontWeight:700, marginBottom:4 },
-  inp:        { width:"100%", background:"#0d0d1a", border:"1px solid #252540", borderRadius:10, padding:"12px 14px", color:"#fff", fontSize:15, fontFamily:"'Fredoka',sans-serif", marginBottom:10, display:"block" },
+  nav:        { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(10,10,20,0.94)", borderTop:"1px solid var(--border-soft)", display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)", backdropFilter:"blur(14px)", WebkitBackdropFilter:"blur(14px)" },
+  navBtn:     { flex:1, background:"none", border:"none", padding:"11px 4px 9px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:4, position:"relative", minHeight:56 },
+  navLine:    { position:"absolute", top:0, left:"26%", right:"26%", height:2.5, background:"linear-gradient(90deg,#9d5cff,#ff4d94)", borderRadius:999 },
+  boom:       { position:"fixed", inset:0, zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(4,4,10,0.82)", pointerEvents:"none", animation:"boomFade 2.6s forwards", backdropFilter:"blur(3px)" },
+  pageTitle:  { fontSize:23, fontWeight:700, marginBottom:4, color:"var(--text-1)", letterSpacing:-0.3 },
+  pageSub:    { fontSize:14, color:"var(--text-4)", marginBottom:18 },
+  inp:        { width:"100%", background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"13px 14px", color:"var(--text-1)", fontSize:15, marginBottom:10, display:"block" },
+  // overlay (psychology hub & detail screens)
+  overlay:    { position:"fixed", inset:0, zIndex:300, background:"var(--bg)", maxWidth:480, margin:"0 auto", display:"flex", flexDirection:"column" },
+  hubBar:     { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"calc(12px + env(safe-area-inset-top)) 16px 12px", borderBottom:"1px solid var(--border-soft)", background:"var(--bg)", position:"sticky", top:0, zIndex:5 },
+  hubBackBtn: { background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--text-2)", padding:"10px 14px 10px 8px", borderRadius:12, cursor:"pointer", fontSize:14, width:84, display:"flex", alignItems:"center", gap:2, fontWeight:500, minHeight:44 },
+  hubCloseBtn:{ background:"var(--surface-3)", border:"1px solid var(--border)", color:"var(--text-1)", width:44, height:44, borderRadius:12, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
+  overlayScroll:{ flex:1, overflowY:"auto", padding:"16px 16px calc(28px + env(safe-area-inset-bottom))" },
+  doneBtn:    { width:"100%", marginTop:24, padding:"14px", borderRadius:"var(--r-md)", border:"none", cursor:"pointer", background:"var(--surface-3)", color:"var(--text-2)", fontSize:15, fontWeight:600 },
+  divider:    { height:1, background:"var(--border-soft)", margin:"0 18px" },
+  // paywall modal
+  modalWrap:  { position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.72)", display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)" },
+  modalCard:  { width:"100%", maxWidth:480, background:"#0e0e18", borderTopLeftRadius:24, borderTopRightRadius:24, border:"1px solid var(--border)", borderBottom:"none", padding:"14px 22px calc(26px + env(safe-area-inset-bottom))", animation:"sheetUp 0.3s ease", maxHeight:"88vh", overflowY:"auto" },
 };
-
-const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Space+Mono:wght@700&display=swap');
-  * { box-sizing: border-box; }
-  ::-webkit-scrollbar { width: 0; }
-  input { outline: none; }
-  @keyframes boomFade { 0%{opacity:1;transform:scale(1)} 60%{opacity:1;transform:scale(1.06)} 100%{opacity:0;transform:scale(0.85)} }
-  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
-  @keyframes fadeup { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-  .fadeup { animation: fadeup 0.3s ease; }
-  button { font-family: 'Fredoka', sans-serif; }
-`;

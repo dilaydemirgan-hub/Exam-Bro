@@ -1,13 +1,3 @@
-
-# macOS
-.DS_Store
-
-# Node
-node_modules/
-
-# Build output
-dist/
-
 # macOS
 .DS_Store
 
