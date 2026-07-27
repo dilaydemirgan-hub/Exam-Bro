@@ -318,17 +318,20 @@ function remaining(dateStr) {
 // Kaygı skalası tema-farkındadır: kanal listeleri --anx-*-rgb token'larından
 // gelir, alfa rampası (sürekli geçiş) burada hesaplanır. Fonksiyon içinde
 // sabit renk YOKTUR.
+function anxBand(v) {
+  return !v ? null : v <= 3 ? "low" : v <= 6 ? "mid" : "high";
+}
 function anxColor(v) {
-  if (!v) return "var(--anx-empty)";
-  if (v <= 3) return `rgba(var(--anx-low-rgb),${(0.3 + v * 0.2).toFixed(2)})`;
-  if (v <= 6) return `rgba(var(--anx-mid-rgb),${(0.3 + (v-3) * 0.18).toFixed(2)})`;
-  return `rgba(var(--anx-high-rgb),${(0.35 + (v-6) * 0.13).toFixed(2)})`;
+  const b = anxBand(v);
+  if (!b) return "var(--anx-empty)";
+  const a = b === "low" ? 0.3 + v * 0.2
+          : b === "mid" ? 0.3 + (v - 3) * 0.18
+          : 0.35 + (v - 6) * 0.13;
+  return `rgba(var(--anx-${b}-rgb),${a.toFixed(2)})`;
 }
 function anxSolid(v) {
-  if (!v) return "var(--anx-none)";
-  if (v <= 3) return "var(--anx-low)";
-  if (v <= 6) return "var(--anx-mid)";
-  return "var(--anx-high)";
+  const b = anxBand(v);
+  return b ? `var(--anx-${b})` : "var(--anx-none)";
 }
 
 // ── Veri renklerinin soluk tonu ──────────────────────────────
@@ -343,8 +346,12 @@ function anxSolid(v) {
 // ekine düşülür; o cihazlarda koyu mod yine birebir aynıdır.
 const SUPPORTS_MIX = typeof CSS !== "undefined" && typeof CSS.supports === "function"
   && CSS.supports("color", "color-mix(in srgb, red 50%, blue)");
-function tint(color, token, fallbackAlpha) {
-  return SUPPORTS_MIX ? `color-mix(in srgb, ${color} var(${token}), transparent)` : `${color}${fallbackAlpha}`;
+// fallbackAlpha: `color` bir hex literal ise sonuna eklenecek hex alfa eki.
+// fallbackColor: `color` bir var() ise (hex eki var()'a eklenemez) kullanılacak
+// tam renk — verilirse fallbackAlpha yok sayılır.
+function tint(color, token, fallbackAlpha, fallbackColor) {
+  if (SUPPORTS_MIX) return `color-mix(in srgb, ${color} var(${token}), transparent)`;
+  return fallbackColor || `${color}${fallbackAlpha}`;
 }
 // Breathing phase from a step label (Turkish): "...al" = inhale, "...ver" = exhale, else hold
 function phaseOf(label) {
@@ -1468,7 +1475,7 @@ function AnxietyTab({ log, onRate }) {
           ))}
         </div>
         {val
-          ? <div style={{ textAlign:"center", fontSize:16, fontWeight:600, color:anxSolid(val), padding:10, background:`${anxColor(val)}33`, borderRadius:12, marginTop:8 }}>{label(val)}</div>
+          ? <div style={{ textAlign:"center", fontSize:16, fontWeight:600, color:anxSolid(val), padding:10, background:tint(anxSolid(val), "--tint-edge-2", null, `rgba(var(--anx-${anxBand(val)}-rgb),0.2)`), borderRadius:12, marginTop:8 }}>{label(val)}</div>
           : <div style={{ textAlign:"center", fontSize:13, color:"var(--text-4)", marginTop:8 }}>1 = tamamen sakin &nbsp;·&nbsp; 10 = çok yüksek kaygı</div>
         }
       </Card>
