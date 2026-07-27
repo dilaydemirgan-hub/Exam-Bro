@@ -8,6 +8,21 @@
     <meta name="description" content="Exam Bro — sınav geri sayımı, günlük hedefler ve kaygı takibi" />
     <link rel="manifest" href="/manifest.json" />
     <title>Exam Bro</title>
+    <script>
+      /* Tema, React mount olmadan ÖNCE uygulanır — yoksa açılışta bir kare
+         yanlış renkli ekran "flaş"ı olur (FOUC). Bu script src/theme.jsx ile
+         aynı mantığı taşır: localStorage 'exambro_theme' → dark|light|system,
+         kayıt yoksa varsayılan dark. */
+      (function () {
+        var t = "dark";
+        try {
+          var p = localStorage.getItem("exambro_theme");
+          if (p === "light" || p === "dark") t = p;
+          else if (p === "system") t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+        } catch (e) { /* storage kapalıysa koyu ile devam */ }
+        document.documentElement.setAttribute("data-theme", t);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -7,9 +7,12 @@ import '@fontsource/fredoka/700.css'
 import '@fontsource/space-mono/700.css'
 import './index.css'
 import App from './App.jsx'
+import { ThemeProvider } from './theme.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ThemeProvider>
+      <App />
+    </ThemeProvider>
   </StrictMode>,
 )

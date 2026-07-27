@@ -315,17 +315,36 @@ function remaining(dateStr) {
     done: false,
   };
 }
+// Kaygı skalası tema-farkındadır: kanal listeleri --anx-*-rgb token'larından
+// gelir, alfa rampası (sürekli geçiş) burada hesaplanır. Fonksiyon içinde
+// sabit renk YOKTUR.
 function anxColor(v) {
-  if (!v) return "#1a1a2e";
-  if (v <= 3) return `rgba(16,217,158,${(0.3 + v * 0.2).toFixed(2)})`;
-  if (v <= 6) return `rgba(255,183,3,${(0.3 + (v-3) * 0.18).toFixed(2)})`;
-  return `rgba(255,77,148,${(0.35 + (v-6) * 0.13).toFixed(2)})`;
+  if (!v) return "var(--anx-empty)";
+  if (v <= 3) return `rgba(var(--anx-low-rgb),${(0.3 + v * 0.2).toFixed(2)})`;
+  if (v <= 6) return `rgba(var(--anx-mid-rgb),${(0.3 + (v-3) * 0.18).toFixed(2)})`;
+  return `rgba(var(--anx-high-rgb),${(0.35 + (v-6) * 0.13).toFixed(2)})`;
 }
 function anxSolid(v) {
-  if (!v) return "#444";
-  if (v <= 3) return "#10d99e";
-  if (v <= 6) return "#ffb703";
-  return "#ff4d94";
+  if (!v) return "var(--anx-none)";
+  if (v <= 3) return "var(--anx-low)";
+  if (v <= 6) return "var(--anx-mid)";
+  return "var(--anx-high)";
+}
+
+// ── Veri renklerinin soluk tonu ──────────────────────────────
+// Sınav (FIXED/OSYM/customs) ve psikoloji kategorisi renkleri VERİDİR, token
+// değildir. Eskiden `${c}14` gibi hex'e alfa eki yazılıyordu; bu, tint'in
+// gücünü koyu zemine sabitliyordu. Artık alfa yüzdesi --tint-* token'ından
+// gelir, böylece açık modda tint yeniden dengelenebilir.
+//
+// `color-mix(in srgb, C X%, transparent)` premultiplied karışım yaptığı için
+// sonuç, alfası X olan C rengine BİREBİR eşittir → koyu modda piksel farkı yok.
+// color-mix desteklenmiyorsa (Safari < 16.2, yani iOS 15–16.1) eski hex-alfa
+// ekine düşülür; o cihazlarda koyu mod yine birebir aynıdır.
+const SUPPORTS_MIX = typeof CSS !== "undefined" && typeof CSS.supports === "function"
+  && CSS.supports("color", "color-mix(in srgb, red 50%, blue)");
+function tint(color, token, fallbackAlpha) {
+  return SUPPORTS_MIX ? `color-mix(in srgb, ${color} var(${token}), transparent)` : `${color}${fallbackAlpha}`;
 }
 // Breathing phase from a step label (Turkish): "...al" = inhale, "...ver" = exhale, else hold
 function phaseOf(label) {
@@ -593,16 +612,16 @@ export default function App() {
           <div style={{ textAlign:"center", animation:"popIn 0.45s ease" }}>
             <div style={{
               width:104, height:104, borderRadius:"50%", margin:"0 auto",
-              background:"radial-gradient(circle at 50% 35%, #2a1a00, #170e00)",
-              border:"1px solid #ff973655", display:"flex", alignItems:"center", justifyContent:"center",
-              boxShadow:"0 0 60px rgba(255,151,54,0.35)", color:"var(--orange)",
+              background:"var(--grad-boom)",
+              border:"1px solid var(--orange-edge)", display:"flex", alignItems:"center", justifyContent:"center",
+              boxShadow:"var(--glow-orange)", color:"var(--orange)",
             }}><IconFlame size={52} /></div>
             <div style={{ fontSize:28, fontWeight:700, color:"var(--gold)", marginTop:16 }}>Süpersin!</div>
             <div style={{ color:"var(--text-3)", fontSize:15, marginTop:6 }}>bugün de işini yaptın</div>
             {streak > 1 && (
               <div style={{
                 display:"inline-flex", alignItems:"center", gap:6, marginTop:14,
-                background:"#2a160033", border:"1px solid #ff973644", borderRadius:999,
+                background:"var(--streak-pill-bg)", border:"1px solid var(--orange-edge-2)", borderRadius:999,
                 padding:"7px 16px", color:"var(--orange)", fontSize:14, fontWeight:600,
               }}><IconFlame size={16} /> {streak} günlük seri</div>
             )}
@@ -688,7 +707,7 @@ export default function App() {
 function Splash() {
   return (
     <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:14 }}>
-      <div style={{ color:"var(--violet)", filter:"drop-shadow(0 0 20px rgba(157,92,255,0.5))" }}>
+      <div style={{ color:"var(--violet)", filter:"var(--glow-logo)" }}>
         <IconGraduation size={56} />
       </div>
       <div style={{ fontSize:22, fontWeight:700, color:"var(--text-1)", letterSpacing:-0.3 }}>Exam Bro</div>
@@ -699,11 +718,11 @@ function Splash() {
 // ── Onboard ──────────────────────────────────────────────────
 function Onboard({ onPick }) {
   return (
-    <div style={{ background:"var(--bg)", minHeight:"100vh", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"48px 24px" }} className="fadein">
-      <div style={{ color:"var(--violet)", filter:"drop-shadow(0 0 24px rgba(157,92,255,0.55))" }}>
+    <div style={{ background:"var(--bg)", minHeight:"100vh", color:"var(--text-0)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"48px 24px" }} className="fadein">
+      <div style={{ color:"var(--violet)", filter:"var(--glow-logo-lg)" }}>
         <IconGraduation size={64} />
       </div>
-      <h1 style={{ fontSize:32, fontWeight:700, textAlign:"center", background:"linear-gradient(90deg,#9d5cff,#ff4d94)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:"12px 0 0", letterSpacing:-0.5 }}>Exam Bro</h1>
+      <h1 style={{ fontSize:32, fontWeight:700, textAlign:"center", background:"var(--grad-brand)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", margin:"12px 0 0", letterSpacing:-0.5 }}>Exam Bro</h1>
       <p style={{ fontSize:15, color:"var(--text-3)", margin:"10px 0 6px", textAlign:"center", lineHeight:1.6, maxWidth:300 }}>
         Sınav geri sayımı, günlük hedefler ve kaygı takibi — hepsi tek yerde.
       </p>
@@ -711,7 +730,7 @@ function Onboard({ onPick }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, width:"100%", maxWidth:360 }}>
         {GRADES.map(g => (
           <button key={g.v} className="pressable" onClick={() => { tap(); onPick(g.v); }}
-            style={{ background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:16, padding:"16px 8px", cursor:"pointer", color:"#fff", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
+            style={{ background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:16, padding:"16px 8px", cursor:"pointer", color:"var(--text-0)", display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
             <span style={{ fontSize:28 }} aria-hidden="true">{g.e}</span>
             <span style={{ fontSize:12.5, fontWeight:600 }}>{g.l}</span>
           </button>
@@ -734,11 +753,11 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
       {/* Studied button */}
       <button className="pressable" onClick={onStudied} aria-label={doneToday ? "Bugün çalıştın" : "Bugün çalıştım olarak işaretle"} style={{
         width:"100%", marginBottom:14, padding:"17px 20px",
-        background: doneToday ? "rgba(16,217,158,0.10)" : "linear-gradient(135deg,#10d99e,#059669)",
-        border: doneToday ? "1px solid rgba(16,217,158,0.35)" : "none",
-        borderRadius:"var(--r-lg)", color: doneToday ? "var(--green)" : "#04120c", fontSize:18, fontWeight:700,
+        background: doneToday ? "var(--green-soft)" : "var(--grad-green)",
+        border: doneToday ? "1px solid var(--green-edge)" : "none",
+        borderRadius:"var(--r-lg)", color: doneToday ? "var(--green)" : "var(--on-green)", fontSize:18, fontWeight:700,
         cursor: doneToday ? "default" : "pointer",
-        boxShadow: doneToday ? "none" : "0 8px 28px rgba(16,217,158,0.35)",
+        boxShadow: doneToday ? "none" : "var(--glow-green)",
         display:"flex", alignItems:"center", justifyContent:"center", gap:10,
       }}>
         <IconCheck size={22} />
@@ -746,12 +765,12 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
       </button>
       {/* Streak */}
       {streak > 1 && (
-        <Card style={{ marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center", background:"linear-gradient(135deg,#1c0e00,#241300)", borderColor:"#ff973630" }}>
+        <Card style={{ marginBottom:14, display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--grad-streak)", borderColor:"var(--orange-edge-3)" }}>
           <div>
             <div style={{ fontSize:15, fontWeight:600, color:"var(--orange)", display:"flex", alignItems:"center", gap:7 }}>
               <IconFlame size={17} /> seri devam ediyor
             </div>
-            <div style={{ fontSize:13, color:"#9a7a52", marginTop:4 }}>bu tempoda devam et.</div>
+            <div style={{ fontSize:13, color:"var(--orange-text)", marginTop:4 }}>bu tempoda devam et.</div>
           </div>
           <div className="num" style={{ fontSize:36, fontWeight:700, color:"var(--gold)" }}>{streak}</div>
         </Card>
@@ -786,12 +805,12 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
       {!isPremium && (
         <button onClick={() => { tap(); onOpenPsych(); }} className="pressable" style={{
           display:"flex", width:"100%", textAlign:"left", cursor:"pointer", marginTop:12,
-          padding:"16px 20px", background:"linear-gradient(135deg,#170f28,#1f1433)",
-          border:"1px solid rgba(157,92,255,0.3)", borderRadius:"var(--r-lg)", alignItems:"center", gap:14, color:"inherit",
+          padding:"16px 20px", background:"var(--grad-pro)",
+          border:"1px solid var(--violet-line-2)", borderRadius:"var(--r-lg)", alignItems:"center", gap:14, color:"inherit",
         }}>
           <span style={{ color:"var(--violet)", display:"flex" }}><IconSparkle size={24} /></span>
           <span style={{ flex:1 }}>
-            <span style={{ display:"block", fontSize:14.5, fontWeight:600, color:"#cbb2ff" }}>Psikoloji Programı — Pro</span>
+            <span style={{ display:"block", fontSize:14.5, fontWeight:600, color:"var(--violet-text-2)" }}>Psikoloji Programı — Pro</span>
             <span style={{ display:"block", fontSize:12.5, color:"var(--text-3)", marginTop:3 }}>Kaygı modülleri, nefes egzersizleri, sınav günü rehberi</span>
           </span>
           <span style={{ color:"var(--violet)", display:"flex" }}><IconChevronRight size={18} /></span>
@@ -837,7 +856,7 @@ function CountCard({ ex }) {
             <div key={k} style={{ flex:1, textAlign:"center" }}>
               <div className="num" style={{
                 fontSize:22, fontWeight:700, color:ex.c,
-                background:`${ex.c}14`, border:`1px solid ${ex.c}22`,
+                background:tint(ex.c, "--tint-soft", "14"), border:`1px solid ${tint(ex.c, "--tint-line", "22")}`,
                 borderRadius:"var(--r-sm)", padding:"8px 2px",
               }}>{pad(r[k])}</div>
               <div style={{ fontSize:10, color:"var(--text-4)", marginTop:6, letterSpacing:1, textTransform:"uppercase" }}>{lbl}</div>
@@ -888,7 +907,7 @@ function PsychologyHub({ isPremium, psychDone, onToggleDay, onClose, onRequirePr
             const prog = it.type === "program" ? (psychDone[it.id] || []).length : 0;
             return (
               <button key={it.id} onClick={() => openItem(it)} className="pressable"
-                style={{ display:"flex", width:"100%", textAlign:"left", cursor:"pointer", background:"var(--surface-2)", border:`1px solid ${locked ? "var(--border)" : accent+"33"}`, borderRadius:16, padding:"17px 18px", marginBottom:10, alignItems:"center", gap:12, opacity:locked?0.72:1, color:"inherit" }}>
+                style={{ display:"flex", width:"100%", textAlign:"left", cursor:"pointer", background:"var(--surface-2)", border:`1px solid ${locked ? "var(--border)" : tint(accent, "--tint-edge-2", "33")}`, borderRadius:16, padding:"17px 18px", marginBottom:10, alignItems:"center", gap:12, opacity:locked?0.72:1, color:"inherit" }}>
                 <span style={{ flex:1 }}>
                   <span style={{ display:"block", fontSize:15.5, fontWeight:600, color: locked ? "var(--text-3)" : "var(--text-1)", lineHeight:1.35 }}>{it.title}</span>
                   <span style={{ display:"block", fontSize:13, color:"var(--text-4)", marginTop:4 }}>
@@ -919,7 +938,7 @@ function PsychologyHub({ isPremium, psychDone, onToggleDay, onClose, onRequirePr
           const accent = PSYCH_COLORS[id] || "#9d5cff";
           return (
             <button key={id} onClick={() => { tap(); setCatId(id); }} className="pressable"
-              style={{ display:"flex", width:"100%", textAlign:"left", cursor:"pointer", background:`linear-gradient(135deg,${accent}12,transparent)`, border:`1px solid ${accent}30`, borderRadius:"var(--r-lg)", padding:"18px 18px", marginBottom:12, alignItems:"center", gap:14, color:"inherit" }}>
+              style={{ display:"flex", width:"100%", textAlign:"left", cursor:"pointer", background:`linear-gradient(135deg,${tint(accent, "--tint-weak", "12")},transparent)`, border:`1px solid ${tint(accent, "--tint-edge", "30")}`, borderRadius:"var(--r-lg)", padding:"18px 18px", marginBottom:12, alignItems:"center", gap:14, color:"inherit" }}>
               <span style={{ fontSize:30 }} aria-hidden="true">{cat.icon}</span>
               <span style={{ flex:1 }}>
                 <span style={{ display:"block", fontSize:17, fontWeight:700, color:"var(--text-1)" }}>{cat.title}</span>
@@ -961,7 +980,7 @@ function LessonReader({ lesson, onClose }) {
         <div style={{ fontSize:24, fontWeight:700, color:"var(--text-1)", lineHeight:1.3, marginBottom:18, letterSpacing:-0.3 }}>{lesson.title}</div>
         {lesson.sections.map((s, i) => (
           <div key={i} style={{ marginBottom:20 }}>
-            <div style={{ fontSize:16, fontWeight:600, color:"#c9b4ff", marginBottom:8 }}>{s.heading}</div>
+            <div style={{ fontSize:16, fontWeight:600, color:"var(--violet-text)", marginBottom:8 }}>{s.heading}</div>
             <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.75 }}>{s.body}</div>
           </div>
         ))}
@@ -1035,7 +1054,7 @@ function BreathingPlayer({ exercise, onClose }) {
             <div style={{ fontSize:15, color:"var(--text-3)", lineHeight:1.7, textAlign:"center", margin:"6px 4px 26px" }}>{exercise.intro}</div>
             <BreathCircle scale={0.55} transSec={1} centerTop={<IconWind size={40} />} centerBottom="" />
             {exercise.note && <div style={{ fontSize:13, color:"var(--text-4)", lineHeight:1.6, textAlign:"center", margin:"26px 6px 0" }}>{exercise.note}</div>}
-            <button onClick={start} className="pressable" style={{ ...S.doneBtn, background:"linear-gradient(135deg,#10d99e,#059669)", color:"#04120c", maxWidth:280 }}>Başla ▶</button>
+            <button onClick={start} className="pressable" style={{ ...S.doneBtn, background:"var(--grad-green)", color:"var(--on-green)", maxWidth:280 }}>Başla ▶</button>
           </>
         )}
 
@@ -1047,7 +1066,7 @@ function BreathingPlayer({ exercise, onClose }) {
             <BreathCircle scale={scale} transSec={transSec} centerTop={<span className="num">{secLeft}</span>} centerBottom="sn" />
             <div style={{ fontSize:22, fontWeight:600, color:"var(--text-1)", marginTop:30, textAlign:"center", minHeight:30 }}>{step.label}</div>
             {selfPaced && (
-              <button onClick={advance} className="pressable" style={{ ...S.doneBtn, background:"linear-gradient(135deg,#10d99e,#059669)", color:"#04120c", maxWidth:280, marginTop:18 }}>
+              <button onClick={advance} className="pressable" style={{ ...S.doneBtn, background:"var(--grad-green)", color:"var(--on-green)", maxWidth:280, marginTop:18 }}>
                 {stepIdx < steps.length - 1 ? "Sıradaki →" : "Bitir ✓"}
               </button>
             )}
@@ -1061,7 +1080,7 @@ function BreathingPlayer({ exercise, onClose }) {
             <div style={{ fontSize:22, fontWeight:700, color:"var(--green)", marginTop:12 }}>Tamamlandı</div>
             <div style={{ fontSize:14, color:"var(--text-3)", marginTop:8, lineHeight:1.6 }}>Bir an dur, nasıl hissettiğini fark et.</div>
             <button onClick={restart} className="pressable" style={{ ...S.doneBtn, background:"transparent", border:"1px solid var(--border)", color:"var(--text-2)", maxWidth:240 }}>Tekrar yap</button>
-            <button onClick={onClose} className="pressable" style={{ ...S.doneBtn, background:"linear-gradient(135deg,#10d99e,#059669)", color:"#04120c", maxWidth:240, marginTop:10 }}>Bitir ✓</button>
+            <button onClick={onClose} className="pressable" style={{ ...S.doneBtn, background:"var(--grad-green)", color:"var(--on-green)", maxWidth:240, marginTop:10 }}>Bitir ✓</button>
           </div>
         )}
       </div>
@@ -1073,20 +1092,20 @@ function BreathCircle({ scale, transSec, centerTop, centerBottom }) {
     <div style={{ width:240, height:240, display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
       <div style={{
         position:"absolute", width:240, height:240, borderRadius:"50%",
-        background:"radial-gradient(circle, rgba(16,217,158,0.16), transparent 70%)",
+        background:"var(--grad-breath-halo)",
       }} />
       <div style={{
         width:200, height:200, borderRadius:"50%",
-        background:"radial-gradient(circle at 50% 40%, #0e5a44, #06281f)",
-        border:"2px solid rgba(16,217,158,0.35)",
-        boxShadow:"0 0 50px rgba(16,217,158,0.3)",
+        background:"var(--grad-breath)",
+        border:"2px solid var(--green-edge)",
+        boxShadow:"var(--glow-breath)",
         transform:`scale(${scale})`,
         transition:`transform ${transSec}s ease-in-out`,
         display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-        color:"#eafff7",
+        color:"var(--breath-text)",
       }}>
         <div style={{ fontSize:46, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center" }}>{centerTop}</div>
-        {centerBottom && <div style={{ fontSize:13, color:"#7fd9bf", marginTop:-2 }}>{centerBottom}</div>}
+        {centerBottom && <div style={{ fontSize:13, color:"var(--breath-text-2)", marginTop:-2 }}>{centerBottom}</div>}
       </div>
     </div>
   );
@@ -1109,9 +1128,9 @@ function ProgramView({ program, done, onToggle, onClose }) {
         {program.days.map(d => {
           const isDone = done.includes(d.day);
           return (
-            <div key={d.day} style={{ background:"var(--surface-2)", border:`1px solid ${isDone?"rgba(16,217,158,0.3)":"var(--border)"}`, borderRadius:16, padding:"16px 18px", marginBottom:12 }}>
+            <div key={d.day} style={{ background:"var(--surface-2)", border:`1px solid ${isDone?"var(--green-line)":"var(--border)"}`, borderRadius:16, padding:"16px 18px", marginBottom:12 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-                <div className="num" style={{ fontSize:12.5, fontWeight:700, color:"var(--blue)", background:"#101830", borderRadius:8, padding:"3px 9px" }}>GÜN {d.day}</div>
+                <div className="num" style={{ fontSize:12.5, fontWeight:700, color:"var(--blue)", background:"var(--badge-blue-bg)", borderRadius:8, padding:"3px 9px" }}>GÜN {d.day}</div>
                 <div style={{ fontSize:15, fontWeight:600, color:"var(--text-1)", flex:1 }}>{d.title}</div>
               </div>
               <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.7, marginBottom:12 }}>{d.body}</div>
@@ -1121,7 +1140,7 @@ function ProgramView({ program, done, onToggle, onClose }) {
               </div>
               <button onClick={() => onToggle(d.day)} className="pressable" style={{
                 width:"100%", padding:"12px", borderRadius:12, cursor:"pointer", fontSize:14, fontWeight:600,
-                background: isDone ? "rgba(16,217,158,0.10)" : "var(--surface-3)",
+                background: isDone ? "var(--green-soft)" : "var(--surface-3)",
                 border: `1px solid ${isDone ? "var(--green)" : "var(--border)"}`,
                 color: isDone ? "var(--green)" : "var(--text-2)",
                 display:"flex", alignItems:"center", justifyContent:"center", gap:8,
@@ -1134,9 +1153,9 @@ function ProgramView({ program, done, onToggle, onClose }) {
         })}
 
         {completed === total && program.closing && (
-          <div style={{ marginTop:4, padding:"18px 20px", background:"linear-gradient(135deg,#0b3a2a,#0e2a40)", border:"1px solid rgba(16,217,158,0.3)", borderRadius:16 }}>
+          <div style={{ marginTop:4, padding:"18px 20px", background:"var(--grad-closing)", border:"1px solid var(--green-line)", borderRadius:16 }}>
             <div style={{ fontSize:32, textAlign:"center", marginBottom:8 }} aria-hidden="true">🎉</div>
-            <div style={{ fontSize:15, color:"#dfffe9", lineHeight:1.7, textAlign:"center" }}>{program.closing}</div>
+            <div style={{ fontSize:15, color:"var(--success-text)", lineHeight:1.7, textAlign:"center" }}>{program.closing}</div>
           </div>
         )}
         <button onClick={onClose} className="pressable" style={S.doneBtn}>Kapat</button>
@@ -1157,7 +1176,7 @@ function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
   return (
     <div style={S.modalWrap} onClick={onClose}>
       <div style={S.modalCard} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Exam Bro Pro">
-        <div style={{ width:36, height:4, borderRadius:999, background:"#2e2e46", margin:"0 auto 18px" }} />
+        <div style={{ width:36, height:4, borderRadius:999, background:"var(--handle)", margin:"0 auto 18px" }} />
         <div style={{ textAlign:"center", marginBottom:6 }}>
           <div style={{ color:"var(--violet)", display:"flex", justifyContent:"center" }}><IconSparkle size={36} /></div>
           <div style={{ fontSize:23, fontWeight:700, color:"var(--text-1)", marginTop:8, letterSpacing:-0.3 }}>Exam Bro Pro</div>
@@ -1167,8 +1186,8 @@ function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
           {benefits.map(([icon, t, s]) => (
             <div key={t} style={{ display:"flex", gap:12, alignItems:"flex-start", marginBottom:14, textAlign:"left" }}>
               <span style={{
-                width:36, height:36, borderRadius:10, background:"rgba(157,92,255,0.12)",
-                border:"1px solid rgba(157,92,255,0.25)", color:"var(--violet)",
+                width:36, height:36, borderRadius:10, background:"var(--violet-soft)",
+                border:"1px solid var(--violet-line)", color:"var(--violet)",
                 display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
               }}>{icon}</span>
               <div style={{ flex:1 }}>
@@ -1183,7 +1202,7 @@ function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
         </div>
         <button onClick={onBuy} disabled={purchasing} className="pressable" style={{
           width:"100%", padding:"15px", borderRadius:"var(--r-md)", border:"none", cursor:purchasing?"default":"pointer",
-          background:"linear-gradient(135deg,#9d5cff,#ff4d94)", color:"#fff", fontSize:16.5, fontWeight:700, opacity:purchasing?0.6:1,
+          background:"var(--grad-brand-135)", color:"var(--on-accent)", fontSize:16.5, fontWeight:700, opacity:purchasing?0.6:1,
         }}>
           {purchasing ? "İşleniyor..." : (priceString ? `${priceString} — Pro'ya Geç` : "Pro'ya Geç")}
         </button>
@@ -1225,7 +1244,7 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
             const r = remaining(ex.date);
             const added = isAdded(ex.id);
             return (
-              <Card key={ex.id} style={{ marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center", borderColor:added?"rgba(16,217,158,0.3)":undefined }}>
+              <Card key={ex.id} style={{ marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center", borderColor:added?"var(--green-line)":undefined }}>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:600, fontSize:15, color:ex.c }}>{ex.n}</div>
                   <div style={{ fontSize:12.5, color:"var(--text-3)", marginTop:2 }}>{ex.sub}</div>
@@ -1237,7 +1256,7 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
                   {!r.done && (
                     <button onClick={() => { if (!added) { tap(); onAdd({...ex}); } }} className={added ? "" : "pressable"}
                       aria-label={added ? `${ex.n} eklendi` : `${ex.n} sınavını ekle`}
-                      style={{ background:added?"rgba(16,217,158,0.10)":"var(--surface-3)", border:`1px solid ${added?"var(--green)":"var(--border)"}`, color:added?"var(--green)":"var(--text-2)", borderRadius:10, padding:"8px 14px", cursor:added?"default":"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:5 }}>
+                      style={{ background:added?"var(--green-soft)":"var(--surface-3)", border:`1px solid ${added?"var(--green)":"var(--border)"}`, color:added?"var(--green)":"var(--text-2)", borderRadius:10, padding:"8px 14px", cursor:added?"default":"pointer", fontSize:13, fontWeight:600, whiteSpace:"nowrap", display:"flex", alignItems:"center", gap:5 }}>
                       {added ? <><IconCheck size={14} /> Eklendi</> : <><IconPlus size={14} /> Ekle</>}
                     </button>
                   )}
@@ -1254,23 +1273,23 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
       <BackBtn onClick={() => setView("list")} title="Manuel Sınav Ekle" />
       <input value={name} onChange={e => setName(e.target.value)} placeholder="Sınav adı (örn. Matematik Yazılı)" style={S.inp} aria-label="Sınav adı" />
       <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{...S.inp, flex:2, marginBottom:0, colorScheme:"dark"}} aria-label="Sınav tarihi" />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{...S.inp, flex:1, marginBottom:0, colorScheme:"dark"}} aria-label="Sınav saati" />
+        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{...S.inp, flex:2, marginBottom:0}} aria-label="Sınav tarihi" />
+        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{...S.inp, flex:1, marginBottom:0}} aria-label="Sınav saati" />
       </div>
       <div style={{ fontSize:13, color:"var(--text-3)", margin:"12px 0 8px" }}>Ders (opsiyonel):</div>
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
         {subjects.map(s => (
           <button key={s} onClick={() => { tap(); setSubj(subj === s ? "" : s); }} className="pressable"
-            style={{ background:subj===s?"var(--violet)":"var(--surface-3)", border:"1px solid " + (subj===s?"var(--violet)":"var(--border)"), borderRadius:20, padding:"8px 14px", color:subj===s?"#fff":"var(--text-2)", fontSize:13, cursor:"pointer", fontWeight:500 }}>
+            style={{ background:subj===s?"var(--violet)":"var(--surface-3)", border:"1px solid " + (subj===s?"var(--violet)":"var(--border)"), borderRadius:20, padding:"8px 14px", color:subj===s?"var(--on-accent)":"var(--text-2)", fontSize:13, cursor:"pointer", fontWeight:500 }}>
             {s}
           </button>
         ))}
       </div>
       <input value={subjects.includes(subj) ? "" : subj} onChange={e => setSubj(e.target.value)} placeholder="Veya farklı bir şey yaz..." style={{...S.inp, marginBottom:16}} aria-label="Farklı ders" />
       <button onClick={handleAdd} disabled={!name.trim() || !date} className="pressable" style={{
-        width:"100%", background: (!name.trim() || !date) ? "var(--surface-3)" : "linear-gradient(135deg,#ffbe0b,#ff9736)",
+        width:"100%", background: (!name.trim() || !date) ? "var(--surface-3)" : "var(--grad-gold)",
         border:"none", borderRadius:"var(--r-md)", padding:15,
-        color: (!name.trim() || !date) ? "var(--text-4)" : "#1a1200",
+        color: (!name.trim() || !date) ? "var(--text-4)" : "var(--on-gold)",
         fontSize:16.5, fontWeight:700, cursor: (!name.trim() || !date) ? "default" : "pointer",
       }}>Sınav Ekle</button>
     </div>
@@ -1288,7 +1307,7 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
         return (
           <button key={ex.id} onClick={() => { tap(); onToggle(ex.id); }} className="pressable"
             aria-pressed={!hide} aria-label={`${ex.n} sayacı ${hide ? "gizli" : "görünür"}`}
-            style={{ display:"flex", width:"100%", textAlign:"left", background:hide?"var(--surface-1)":`linear-gradient(135deg,${ex.c}12,transparent)`, border:`1px solid ${hide?"var(--border-soft)":ex.c+"30"}`, borderRadius:"var(--r-md)", padding:"14px 16px", marginBottom:8, justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.55:1, transition:"all 0.2s", color:"inherit" }}>
+            style={{ display:"flex", width:"100%", textAlign:"left", background:hide?"var(--surface-1)":`linear-gradient(135deg,${tint(ex.c, "--tint-weak", "12")},transparent)`, border:`1px solid ${hide?"var(--border-soft)":tint(ex.c, "--tint-edge", "30")}`, borderRadius:"var(--r-md)", padding:"14px 16px", marginBottom:8, justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.55:1, transition:"all 0.2s", color:"inherit" }}>
             <span>
               <span style={{ display:"block", fontWeight:600, fontSize:16, color:hide?"var(--text-4)":ex.c }}>{ex.n}{info?.isEstimate ? " (tahmini)" : ""}</span>
               <span style={{ display:"block", fontSize:11.5, color:"var(--text-4)", marginTop:3 }}>{(info ? info.date : new Date(ex.date)).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</span>
@@ -1318,7 +1337,7 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
                 <div style={{ display:"flex", gap:6, alignItems:"center" }}>
                   <span className="num" style={{ fontSize:14, color:ex.c||"var(--gold)" }}>{r.done?"✓":`${r.d}g`}</span>
                   <button onClick={() => { tap(); onDel(ex.id); }} className="pressable" aria-label={`${ex.n} sınavını sil`}
-                    style={{ background:"transparent", border:"none", color:"#c04a6e", width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    style={{ background:"transparent", border:"none", color:"var(--danger-muted)", width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <IconTrash size={18} />
                   </button>
                 </div>
@@ -1328,10 +1347,10 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
         </>
       )}
       <div style={{ display:"flex", gap:10, marginTop:18 }}>
-        <button onClick={() => { tap(); setView("osym"); }} className="pressable" style={{ flex:1, background:"var(--surface-2)", border:"1px solid rgba(157,92,255,0.35)", borderRadius:"var(--r-md)", padding:"16px 10px", color:"#b07aff", fontSize:14.5, fontWeight:600, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+        <button onClick={() => { tap(); setView("osym"); }} className="pressable" style={{ flex:1, background:"var(--surface-2)", border:"1px solid var(--violet-line-3)", borderRadius:"var(--r-md)", padding:"16px 10px", color:"var(--violet-light)", fontSize:14.5, fontWeight:600, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
           <IconCalendar size={24} />ÖSYM Takvimi
         </button>
-        <button onClick={() => { tap(); setView("manual"); }} className="pressable" style={{ flex:1, background:"var(--surface-2)", border:"1px dashed rgba(255,190,11,0.4)", borderRadius:"var(--r-md)", padding:"16px 10px", color:"var(--gold)", fontSize:14.5, fontWeight:600, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+        <button onClick={() => { tap(); setView("manual"); }} className="pressable" style={{ flex:1, background:"var(--surface-2)", border:"1px dashed var(--gold-line)", borderRadius:"var(--r-md)", padding:"16px 10px", color:"var(--gold)", fontSize:14.5, fontWeight:600, cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
           <IconPlus size={24} />Manuel Ekle
         </button>
       </div>
@@ -1367,10 +1386,10 @@ function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
         </Card>
       )}
       {list.map(g => (
-        <div key={g.id} style={{ background:"var(--surface-3)", border:`1px solid ${g.done?"rgba(16,217,158,0.3)":"var(--border)"}`, borderRadius:"var(--r-md)", padding:"6px 6px 6px 8px", marginBottom:8, display:"flex", alignItems:"center", gap:4 }}>
+        <div key={g.id} style={{ background:"var(--surface-3)", border:`1px solid ${g.done?"var(--green-line)":"var(--border)"}`, borderRadius:"var(--r-md)", padding:"6px 6px 6px 8px", marginBottom:8, display:"flex", alignItems:"center", gap:4 }}>
           <button onClick={() => { tap(); onToggle(d, g.id); }} aria-label={g.done ? `${g.text} — tamamlandı, geri al` : `${g.text} — tamamla`}
             style={{ width:44, height:44, background:"transparent", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:0 }}>
-            <span style={{ width:26, height:26, borderRadius:"50%", border:`2px solid ${g.done?"var(--green)":"#3a3a58"}`, background:g.done?"var(--green)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", color:"#04120c" }}>
+            <span style={{ width:26, height:26, borderRadius:"50%", border:`2px solid ${g.done?"var(--green)":"var(--border-strong)"}`, background:g.done?"var(--green)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", color:"var(--on-green)" }}>
               {g.done && <IconCheck size={15} />}
             </span>
           </button>
@@ -1387,7 +1406,7 @@ function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
           <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
             {freshSuggestions.map(s => (
               <button key={s} onMouseDown={e => { e.preventDefault(); onAdd(d, s); tap(); }} className="pressable"
-                style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:20, padding:"9px 14px", color:"#bdb3e0", fontSize:13, cursor:"pointer", fontWeight:500 }}>
+                style={{ background:"var(--surface-2)", border:"1px solid var(--border)", borderRadius:20, padding:"9px 14px", color:"var(--violet-text-3)", fontSize:13, cursor:"pointer", fontWeight:500 }}>
                 + {s}
               </button>
             ))}
@@ -1399,7 +1418,7 @@ function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
           onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)}
           placeholder="Yeni hedef ekle..." aria-label="Yeni hedef"
           style={{ flex:1, background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"13px 16px", color:"var(--text-1)", fontSize:15 }} />
-        <button onClick={add} className="pressable" aria-label="Hedefi ekle" style={{ background:"linear-gradient(135deg,#10d99e,#059669)", border:"none", borderRadius:"var(--r-sm)", width:52, color:"#04120c", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <button onClick={add} className="pressable" aria-label="Hedefi ekle" style={{ background:"var(--grad-green)", border:"none", borderRadius:"var(--r-sm)", width:52, color:"var(--on-green)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <IconPlus size={22} />
         </button>
       </div>
@@ -1436,9 +1455,9 @@ function AnxietyTab({ log, onRate }) {
               {row.map(v => (
                 <button key={v} role="radio" aria-checked={val===v} aria-label={`${v}`} onClick={() => pick(v)} style={{
                   flex:1, height:48, borderRadius:"var(--r-sm)", minWidth:0,
-                  background: val===v ? anxColor(v) : "#20203a",
+                  background: val===v ? anxColor(v) : "var(--surface-input)",
                   border: `2px solid ${val===v ? anxSolid(v) : "transparent"}`,
-                  color: val===v ? "#fff" : "var(--text-3)", fontSize:15, fontWeight:700,
+                  color: val===v ? "var(--on-accent)" : "var(--text-3)", fontSize:15, fontWeight:700,
                   cursor:"pointer",
                   transform: val===v ? "scale(1.06)" : "scale(1)",
                   transition:"all 0.15s",
@@ -1454,7 +1473,7 @@ function AnxietyTab({ log, onRate }) {
         }
       </Card>
       <div style={{ display:"flex", gap:16, marginBottom:14, fontSize:12 }}>
-        {[["#10d99e","1–3 Sakin"],["#ffb703","4–6 Orta"],["#ff4d94","7–10 Yüksek"]].map(([c,l]) => (
+        {[["var(--anx-low)","1–3 Sakin"],["var(--anx-mid)","4–6 Orta"],["var(--anx-high)","7–10 Yüksek"]].map(([c,l]) => (
           <div key={l} style={{ display:"flex", alignItems:"center", gap:5, color:"var(--text-3)" }}>
             <div style={{ width:11, height:11, borderRadius:3, background:c }} />{l}
           </div>
@@ -1468,7 +1487,7 @@ function AnxietyTab({ log, onRate }) {
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5 }}>
         {days.map(ds => (
-          <div key={ds} title={ds} style={{ aspectRatio:"1", borderRadius:7, background:anxColor(log[ds]||null), border:ds===d?"2px solid rgba(255,255,255,0.4)":"1px solid #1a1a3e", position:"relative" }}>
+          <div key={ds} title={ds} style={{ aspectRatio:"1", borderRadius:7, background:anxColor(log[ds]||null), border:ds===d?"2px solid var(--today-ring)":"1px solid var(--border-grid)", position:"relative" }}>
             {ds === d && <div style={{ position:"absolute", bottom:2, right:2, width:5, height:5, background:"var(--gold)", borderRadius:"50%" }} />}
           </div>
         ))}
@@ -1515,7 +1534,7 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const s=studied.includes(d), isT=d===today();
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div style={{ width:"100%", background:s?"linear-gradient(180deg,#10d99e,#04a07a)":"#22223a", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
+                <div style={{ width:"100%", background:s?"var(--grad-green-bar)":"var(--track)", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
                 <div style={{ fontSize:10, color:isT?"var(--gold)":"var(--text-4)", fontWeight:isT?700:400 }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
@@ -1529,7 +1548,7 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const v = anxiety[d];
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div style={{ width:"100%", background:v?anxColor(v):"#22223a", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
+                <div style={{ width:"100%", background:v?anxColor(v):"var(--track)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
                 <div style={{ fontSize:10, color:"var(--text-4)" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
@@ -1581,9 +1600,9 @@ function SettingsRow({ icon, title, sub, right, onClick, danger, ariaLabel }) {
       display:"flex", width:"100%", alignItems:"center", gap:14, padding:"14px 18px",
       background:"transparent", border:"none", cursor:"pointer", textAlign:"left", color:"inherit",
     }}>
-      <span style={{ color: danger ? "#e5375f" : "var(--text-3)", display:"flex", flexShrink:0 }}>{icon}</span>
+      <span style={{ color: danger ? "var(--danger)" : "var(--text-3)", display:"flex", flexShrink:0 }}>{icon}</span>
       <span style={{ flex:1 }}>
-        <span style={{ display:"block", fontSize:15, fontWeight:500, color: danger ? "#e5375f" : "var(--text-1)" }}>{title}</span>
+        <span style={{ display:"block", fontSize:15, fontWeight:500, color: danger ? "var(--danger)" : "var(--text-1)" }}>{title}</span>
         {sub && <span style={{ display:"block", fontSize:12.5, color:"var(--text-4)", marginTop:2 }}>{sub}</span>}
       </span>
       {right}
@@ -1594,13 +1613,13 @@ function ToggleSwitch({ on }) {
   return (
     <span aria-hidden="true" style={{
       width:46, height:28, borderRadius:999, flexShrink:0, position:"relative",
-      background: on ? "var(--green)" : "#2c2c48", transition:"background 0.2s",
+      background: on ? "var(--green)" : "var(--switch-off)", transition:"background 0.2s",
       display:"inline-block",
     }}>
       <span style={{
         position:"absolute", top:3, left: on ? 21 : 3, width:22, height:22,
-        borderRadius:"50%", background:"#fff", transition:"left 0.2s",
-        boxShadow:"0 1px 4px rgba(0,0,0,0.4)",
+        borderRadius:"50%", background:"var(--switch-knob)", transition:"left 0.2s",
+        boxShadow:"var(--shadow-knob)",
       }} />
     </span>
   );
@@ -1630,16 +1649,16 @@ function BackBtn({ onClick, title }) {
 // ── Styles ───────────────────────────────────────────────────
 const S = {
   root:       { background:"var(--bg)", minHeight:"100vh", color:"var(--text-1)", paddingBottom:"calc(84px + env(safe-area-inset-bottom))", maxWidth:480, margin:"0 auto", position:"relative" },
-  header:     { padding:"calc(16px + env(safe-area-inset-top)) 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"rgba(8,8,16,0.92)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", zIndex:10, borderBottom:"1px solid var(--border-soft)" },
-  logo:       { fontSize:21, fontWeight:700, background:"linear-gradient(90deg,#b98aff,#ff7ab0)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", letterSpacing:-0.4, lineHeight:1.15 },
+  header:     { padding:"calc(16px + env(safe-area-inset-top)) 20px 12px", display:"flex", justifyContent:"space-between", alignItems:"center", position:"sticky", top:0, background:"var(--header-bg)", backdropFilter:"blur(12px)", WebkitBackdropFilter:"blur(12px)", zIndex:10, borderBottom:"1px solid var(--border-soft)" },
+  logo:       { fontSize:21, fontWeight:700, background:"var(--grad-logo)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", letterSpacing:-0.4, lineHeight:1.15 },
   headerSub:  { fontSize:12, color:"var(--text-4)", marginTop:1 },
-  proBadge:   { background:"linear-gradient(135deg,#9d5cff,#ff4d94)", borderRadius:20, padding:"5px 10px", fontSize:11.5, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", gap:4 },
-  streakBadge:{ background:"rgba(255,151,54,0.12)", borderRadius:20, padding:"5px 12px", fontSize:14, fontWeight:700, border:"1px solid rgba(255,151,54,0.4)", color:"var(--orange)", display:"flex", alignItems:"center", gap:5 },
+  proBadge:   { background:"var(--grad-brand-135)", borderRadius:20, padding:"5px 10px", fontSize:11.5, fontWeight:700, color:"var(--on-accent)", display:"flex", alignItems:"center", gap:4 },
+  streakBadge:{ background:"var(--orange-soft)", borderRadius:20, padding:"5px 12px", fontSize:14, fontWeight:700, border:"1px solid var(--orange-line)", color:"var(--orange)", display:"flex", alignItems:"center", gap:5 },
   scroll:     { padding:"14px 16px 0" },
-  nav:        { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(10,10,20,0.94)", borderTop:"1px solid var(--border-soft)", display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)", backdropFilter:"blur(14px)", WebkitBackdropFilter:"blur(14px)" },
+  nav:        { position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"var(--nav-bg)", borderTop:"1px solid var(--border-soft)", display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)", backdropFilter:"blur(14px)", WebkitBackdropFilter:"blur(14px)" },
   navBtn:     { flex:1, background:"none", border:"none", padding:"11px 4px 9px", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:4, position:"relative", minHeight:56 },
-  navLine:    { position:"absolute", top:0, left:"26%", right:"26%", height:2.5, background:"linear-gradient(90deg,#9d5cff,#ff4d94)", borderRadius:999 },
-  boom:       { position:"fixed", inset:0, zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(4,4,10,0.82)", pointerEvents:"none", animation:"boomFade 2.6s forwards", backdropFilter:"blur(3px)" },
+  navLine:    { position:"absolute", top:0, left:"26%", right:"26%", height:2.5, background:"var(--grad-brand)", borderRadius:999 },
+  boom:       { position:"fixed", inset:0, zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", background:"var(--overlay-boom)", pointerEvents:"none", animation:"boomFade 2.6s forwards", backdropFilter:"blur(3px)" },
   pageTitle:  { fontSize:23, fontWeight:700, marginBottom:4, color:"var(--text-1)", letterSpacing:-0.3 },
   pageSub:    { fontSize:14, color:"var(--text-4)", marginBottom:18 },
   inp:        { width:"100%", background:"var(--surface-1)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"13px 14px", color:"var(--text-1)", fontSize:15, marginBottom:10, display:"block" },
@@ -1652,6 +1671,6 @@ const S = {
   doneBtn:    { width:"100%", marginTop:24, padding:"14px", borderRadius:"var(--r-md)", border:"none", cursor:"pointer", background:"var(--surface-3)", color:"var(--text-2)", fontSize:15, fontWeight:600 },
   divider:    { height:1, background:"var(--border-soft)", margin:"0 18px" },
   // paywall modal
-  modalWrap:  { position:"fixed", inset:0, zIndex:400, background:"rgba(0,0,0,0.72)", display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)" },
-  modalCard:  { width:"100%", maxWidth:480, background:"#0e0e18", borderTopLeftRadius:24, borderTopRightRadius:24, border:"1px solid var(--border)", borderBottom:"none", padding:"14px 22px calc(26px + env(safe-area-inset-bottom))", animation:"sheetUp 0.3s ease", maxHeight:"88vh", overflowY:"auto" },
+  modalWrap:  { position:"fixed", inset:0, zIndex:400, background:"var(--overlay-modal)", display:"flex", alignItems:"flex-end", justifyContent:"center", backdropFilter:"blur(4px)" },
+  modalCard:  { width:"100%", maxWidth:480, background:"var(--surface-modal)", borderTopLeftRadius:24, borderTopRightRadius:24, border:"1px solid var(--border)", borderBottom:"none", padding:"14px 22px calc(26px + env(safe-area-inset-bottom))", animation:"sheetUp 0.3s ease", maxHeight:"88vh", overflowY:"auto" },
 };

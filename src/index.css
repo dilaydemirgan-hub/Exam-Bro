@@ -2,22 +2,53 @@
    Exam Bro — Global styles & design tokens
    Tek kaynak: renk, tipografi, spacing, radius ve animasyonlar
    buradan yönetilir. Componentlerde ham hex kullanma.
+
+   TEMA: `:root` varsayılan olarak KOYU değerleri taşır (kayıtlı tercih
+   yoksa / JS çalışmadan önce koyu görünsün diye). `[data-theme="dark"]`
+   aynı bloğu paylaşır — iki kopya elle senkron tutulmaz.
+   `[data-theme="light"]` bloğu Faz 2'de doldurulacak.
+
+   Sınav ve psikoloji kategorisi renkleri VERİDİR (App.jsx içindeki
+   FIXED/OSYM/PSYCH_COLORS), token değildir. Onların yüzey üstündeki
+   soluk tonları --tint-* yüzdeleriyle üretilir.
    ══════════════════════════════════════════════════════════════ */
 
-:root {
+:root,
+:root[data-theme="dark"] {
   /* ── Surfaces ── */
   --bg:          #080810;
   --surface-1:   #101018;   /* kart zemini (koyu) */
   --surface-2:   #14141f;   /* kart zemini */
   --surface-3:   #1a1a2e;   /* yükseltilmiş kart / input */
+  --surface-input: #20203a; /* kaygı skalası pasif buton */
+  --surface-sheet: #12121c; /* onay sheet'i */
+  --surface-modal: #0e0e18; /* paywall modal kartı */
+  --surface-toast: #1e1e30; /* toast */
   --border:      #23233a;   /* standart hairline */
   --border-soft: #1a1a2c;
+  --border-strong: #3a3a58; /* hedef checkbox çemberi */
+  --border-grid: #1a1a3e;   /* kaygı ısı haritası kare kenarlığı */
+  --track:       #22223a;   /* ilerleme çubuğu / grafik boş zemin */
+  --handle:      #2e2e46;   /* sheet tutamacı */
+  --switch-off:  #2c2c48;   /* toggle kapalı zemin */
+  --switch-knob: #fff;      /* toggle topuzu */
+
+  /* ── Sabit / yarı saydam katmanlar ── */
+  --header-bg:     rgba(8,8,16,0.92);
+  --nav-bg:        rgba(10,10,20,0.94);
+  --overlay-sheet: rgba(0,0,0,0.7);    /* onay sheet arkası */
+  --overlay-modal: rgba(0,0,0,0.72);   /* paywall arkası */
+  --overlay-boom:  rgba(4,4,10,0.82);  /* "Süpersin!" kutlaması */
 
   /* ── Text (WCAG: primary/secondary AA uyumlu) ── */
+  --text-0: #fff;           /* en yüksek kontrast (onboarding) */
   --text-1: #f2f2f8;        /* başlıklar */
   --text-2: #b4b4cc;        /* gövde */
   --text-3: #8a8aa6;        /* ikincil */
   --text-4: #62627e;        /* ipucu / meta — yalnızca dekoratif */
+  --on-accent: #fff;        /* violet/pink zemin üstü metin */
+  --on-green:  #04120c;     /* yeşil buton üstü metin */
+  --on-gold:   #1a1200;     /* sarı buton üstü metin */
 
   /* ── Brand & semantic accents ── */
   --violet: #9d5cff;
@@ -27,6 +58,85 @@
   --blue:   #5c9bff;
   --orange: #ff9736;
   --amber:  #ffb703;
+  --danger:       #e5375f;
+  --danger-muted: #c04a6e;  /* sil ikonu */
+
+  /* ── Accent türevleri ── */
+  --green-soft: rgba(16,217,158,0.10);   /* tamamlandı zemini */
+  --green-line: rgba(16,217,158,0.3);    /* tamamlandı kenarlığı */
+  --green-edge: rgba(16,217,158,0.35);
+  --green-deep:   #059669;               /* buton gradyan sonu */
+  --green-deep-2: #04a07a;               /* rapor çubuğu gradyan sonu */
+
+  --violet-soft:   rgba(157,92,255,0.12);
+  --violet-line:   rgba(157,92,255,0.25);
+  --violet-line-2: rgba(157,92,255,0.3);
+  --violet-line-3: rgba(157,92,255,0.35);
+  --violet-light:  #b07aff;   /* ÖSYM butonu yazısı */
+  --violet-text:   #c9b4ff;   /* ders bölüm başlığı */
+  --violet-text-2: #cbb2ff;   /* Pro teaser başlığı */
+  --violet-text-3: #bdb3e0;   /* hedef öneri çipi */
+
+  --orange-soft:   rgba(255,151,54,0.12);
+  --orange-line:   rgba(255,151,54,0.4);
+  --orange-edge:   #ff973655;
+  --orange-edge-2: #ff973644;
+  --orange-edge-3: #ff973630;
+  --orange-text:   #9a7a52;   /* seri kartı alt yazısı */
+  --streak-pill-bg: #2a160033;
+
+  --gold-line: rgba(255,190,11,0.4);
+  --badge-blue-bg: #101830;   /* "GÜN n" rozeti */
+
+  --breath-text:   #eafff7;
+  --breath-text-2: #7fd9bf;
+  --success-text:  #dfffe9;   /* program kapanış metni */
+  --today-ring:    rgba(255,255,255,0.4);  /* ısı haritasında bugün */
+
+  /* ── Kaygı skalası ──
+     Kanal listesi olarak tutulur: anxColor() sürekli bir alfa rampası
+     üretiyor, rgba(var(--...-rgb), a) ile tema-farkında hale geliyor. */
+  --anx-low-rgb:  16,217,158;
+  --anx-mid-rgb:  255,183,3;
+  --anx-high-rgb: 255,77,148;
+  --anx-low:   #10d99e;
+  --anx-mid:   #ffb703;
+  --anx-high:  #ff4d94;
+  --anx-empty: #1a1a2e;   /* kayıt yok */
+  --anx-none:  #444;      /* değer yok (anxSolid) */
+
+  /* ── Veri renklerinin (sınav / kategori) yüzey üstü tonu ──
+     Koyu mod değerleri eski hex-alfa eklerinin birebir karşılığıdır:
+     0x12/255 = %7.059, 0x14 = %7.843, 0x22 = %13.333,
+     0x30 = %18.824, 0x33 = %20. Açık modda bu yüzdeler artırılacak. */
+  --tint-weak:   7.059%;
+  --tint-soft:   7.843%;
+  --tint-line:   13.333%;
+  --tint-edge:   18.824%;
+  --tint-edge-2: 20%;
+
+  /* ── Gradyanlar ── */
+  --grad-logo:      linear-gradient(90deg,#b98aff,#ff7ab0);
+  --grad-brand:     linear-gradient(90deg,var(--violet),var(--pink));
+  --grad-brand-135: linear-gradient(135deg,var(--violet),var(--pink));
+  --grad-green:     linear-gradient(135deg,var(--green),var(--green-deep));
+  --grad-green-bar: linear-gradient(180deg,var(--green),var(--green-deep-2));
+  --grad-gold:      linear-gradient(135deg,var(--gold),var(--orange));
+  --grad-streak:    linear-gradient(135deg,#1c0e00,#241300);
+  --grad-pro:       linear-gradient(135deg,#170f28,#1f1433);
+  --grad-boom:      radial-gradient(circle at 50% 35%, #2a1a00, #170e00);
+  --grad-breath:    radial-gradient(circle at 50% 40%, #0e5a44, #06281f);
+  --grad-breath-halo: radial-gradient(circle, rgba(16,217,158,0.16), transparent 70%);
+  --grad-closing:   linear-gradient(135deg,#0b3a2a,#0e2a40);
+
+  /* ── Gölge & parıltı ── */
+  --shadow-toast: 0 8px 30px rgba(0,0,0,0.55);
+  --shadow-knob:  0 1px 4px rgba(0,0,0,0.4);
+  --glow-green:   0 8px 28px rgba(16,217,158,0.35);
+  --glow-orange:  0 0 60px rgba(255,151,54,0.35);
+  --glow-breath:  0 0 50px rgba(16,217,158,0.3);
+  --glow-logo:    drop-shadow(0 0 20px rgba(157,92,255,0.5));
+  --glow-logo-lg: drop-shadow(0 0 24px rgba(157,92,255,0.55));
 
   /* ── Radius scale ── */
   --r-sm: 10px;
@@ -38,6 +148,8 @@
   --font-ui:   'Fredoka', -apple-system, 'SF Pro Rounded', system-ui, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
 
+  /* Native form kontrolleri (date/time picker), scrollbar ve varsayılan
+     kontrol renkleri buna bağlı — tema ile birlikte değişmek ZORUNDA. */
   color-scheme: dark;
 }
 
