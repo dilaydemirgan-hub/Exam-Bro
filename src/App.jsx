@@ -1237,6 +1237,11 @@ function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
 
 // ── Exams ────────────────────────────────────────────────────
 function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
+  // Sınav rengi VERİ. Bu sekmede METİN olarak kullanıldığı 7 yerde açık modda
+  // ink()'ten geçer (docs/LIGHT-MODE.md §6). Hepsi kova 1 (normal metin, 4.5:1):
+  // en büyüğü 16px/600, hiçbiri WCAG'in "büyük metin" eşiğini (18.66px bold)
+  // geçmiyor. Kart yıkaması / kenarlığı metin değil → tint() ham ex.c ile kalır.
+  const { theme } = useTheme();
   const [view,  setView]  = useState("list");
   const [name,  setName]  = useState("");
   const [date,  setDate]  = useState("");
@@ -1261,15 +1266,16 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
           {OSYM.filter(e => e.cat === cat).map(ex => {
             const r = remaining(ex.date);
             const added = isAdded(ex.id);
+            const c = ink(ex.c, theme);
             return (
               <Card key={ex.id} style={{ marginBottom:8, display:"flex", justifyContent:"space-between", alignItems:"center", borderColor:added?"var(--green-line)":undefined }}>
                 <div style={{ flex:1 }}>
-                  <div style={{ fontWeight:600, fontSize:15, color:ex.c }}>{ex.n}</div>
+                  <div style={{ fontWeight:600, fontSize:15, color:c }}>{ex.n}</div>
                   <div style={{ fontSize:12.5, color:"var(--text-3)", marginTop:2 }}>{ex.sub}</div>
                   <div style={{ fontSize:11.5, color:"var(--text-4)", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:6 }}>
-                  {!r.done && <div className="num" style={{ fontSize:12, color:ex.c }}>{r.d}g kaldı</div>}
+                  {!r.done && <div className="num" style={{ fontSize:12, color:c }}>{r.d}g kaldı</div>}
                   {r.done  && <div style={{ fontSize:12, color:"var(--text-4)" }}>Geçti</div>}
                   {!r.done && (
                     <button onClick={() => { if (!added) { tap(); onAdd({...ex}); } }} className={added ? "" : "pressable"}
@@ -1289,10 +1295,12 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
   if (view === "manual") return (
     <div className="fadeup">
       <BackBtn onClick={() => setView("list")} title="Manuel Sınav Ekle" />
-      <input value={name} onChange={e => setName(e.target.value)} placeholder="Sınav adı (örn. Matematik Yazılı)" style={S.inp} aria-label="Sınav adı" />
+      <input className="themed" value={name} onChange={e => setName(e.target.value)} placeholder="Sınav adı (örn. Matematik Yazılı)" style={S.inp} aria-label="Sınav adı" />
+      {/* date/time picker'ının açık/koyu görünümü :root'taki color-scheme'den
+          kalıtılıyor — buraya inline colorScheme YAZMA (docs/LIGHT-MODE.md §4). */}
       <div style={{ display:"flex", gap:8, marginBottom:10 }}>
-        <input type="date" value={date} onChange={e => setDate(e.target.value)} style={{...S.inp, flex:2, marginBottom:0}} aria-label="Sınav tarihi" />
-        <input type="time" value={time} onChange={e => setTime(e.target.value)} style={{...S.inp, flex:1, marginBottom:0}} aria-label="Sınav saati" />
+        <input className="themed" type="date" value={date} onChange={e => setDate(e.target.value)} style={{...S.inp, flex:2, marginBottom:0}} aria-label="Sınav tarihi" />
+        <input className="themed" type="time" value={time} onChange={e => setTime(e.target.value)} style={{...S.inp, flex:1, marginBottom:0}} aria-label="Sınav saati" />
       </div>
       <div style={{ fontSize:13, color:"var(--text-3)", margin:"12px 0 8px" }}>Ders (opsiyonel):</div>
       <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
@@ -1303,7 +1311,7 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
           </button>
         ))}
       </div>
-      <input value={subjects.includes(subj) ? "" : subj} onChange={e => setSubj(e.target.value)} placeholder="Veya farklı bir şey yaz..." style={{...S.inp, marginBottom:16}} aria-label="Farklı ders" />
+      <input className="themed" value={subjects.includes(subj) ? "" : subj} onChange={e => setSubj(e.target.value)} placeholder="Veya farklı bir şey yaz..." style={{...S.inp, marginBottom:16}} aria-label="Farklı ders" />
       <button onClick={handleAdd} disabled={!name.trim() || !date} className="pressable" style={{
         width:"100%", background: (!name.trim() || !date) ? "var(--surface-3)" : "var(--grad-gold)",
         border:"none", borderRadius:"var(--r-md)", padding:15,
@@ -1322,17 +1330,18 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
         const hide = hidden.includes(ex.id);
         const info = examInfoFor(ex);
         const r = remaining(info ? info.date : ex.date);
+        const c = ink(ex.c, theme);
         return (
           <button key={ex.id} onClick={() => { tap(); onToggle(ex.id); }} className="pressable"
             aria-pressed={!hide} aria-label={`${ex.n} sayacı ${hide ? "gizli" : "görünür"}`}
             style={{ display:"flex", width:"100%", textAlign:"left", background:hide?"var(--surface-1)":`linear-gradient(135deg,${tint(ex.c, "--tint-weak", "12")},transparent)`, border:`1px solid ${hide?"var(--border-soft)":tint(ex.c, "--tint-edge", "30")}`, borderRadius:"var(--r-md)", padding:"14px 16px", marginBottom:8, justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.55:1, transition:"all 0.2s", color:"inherit" }}>
             <span>
-              <span style={{ display:"block", fontWeight:600, fontSize:16, color:hide?"var(--text-4)":ex.c }}>{ex.n}{info?.isEstimate ? " (tahmini)" : ""}</span>
+              <span style={{ display:"block", fontWeight:600, fontSize:16, color:hide?"var(--text-4)":c }}>{ex.n}{info?.isEstimate ? " (tahmini)" : ""}</span>
               <span style={{ display:"block", fontSize:11.5, color:"var(--text-4)", marginTop:3 }}>{(info ? info.date : new Date(ex.date)).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</span>
             </span>
             <span style={{ display:"flex", gap:12, alignItems:"center" }}>
-              {info?.isExamDay && !hide && <span style={{ fontSize:13, color:ex.c, fontWeight:700 }}>bugün! 🍀</span>}
-              {!info?.isExamDay && !r.done && !hide && <span className="num" style={{ fontSize:14, color:ex.c }}>{r.d}g</span>}
+              {info?.isExamDay && !hide && <span style={{ fontSize:13, color:c, fontWeight:700 }}>bugün! 🍀</span>}
+              {!info?.isExamDay && !r.done && !hide && <span className="num" style={{ fontSize:14, color:c }}>{r.d}g</span>}
               <span style={{ color: hide ? "var(--text-4)" : "var(--text-2)", display:"flex" }}>
                 {hide ? <IconEyeOff size={20} /> : <IconEye size={20} />}
               </span>
@@ -1345,15 +1354,16 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
           <SectionLabel style={{ color:"var(--gold)", margin:"18px 0 10px" }}>Eklediğim Sınavlar</SectionLabel>
           {customs.map(ex => {
             const r = remaining(ex.date);
+            const c = ink(ex.c, theme);   // ex.c yoksa ink() undefined döner → alttaki || devreye girer
             return (
               <Card key={ex.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, padding:"13px 16px" }}>
                 <div>
-                  <div style={{ fontWeight:600, fontSize:15, color:ex.c||"var(--text-1)" }}>{ex.n}</div>
+                  <div style={{ fontWeight:600, fontSize:15, color:c||"var(--text-1)" }}>{ex.n}</div>
                   {ex.sub && <div style={{ fontSize:12.5, color:"var(--text-3)", marginTop:2 }}>{ex.sub}</div>}
                   <div style={{ fontSize:11.5, color:"var(--text-4)", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
                 </div>
                 <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                  <span className="num" style={{ fontSize:14, color:ex.c||"var(--gold)" }}>{r.done?"✓":`${r.d}g`}</span>
+                  <span className="num" style={{ fontSize:14, color:c||"var(--gold)" }}>{r.done?"✓":`${r.d}g`}</span>
                   <button onClick={() => { tap(); onDel(ex.id); }} className="pressable" aria-label={`${ex.n} sınavını sil`}
                     style={{ background:"transparent", border:"none", color:"var(--danger-muted)", width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <IconTrash size={18} />
