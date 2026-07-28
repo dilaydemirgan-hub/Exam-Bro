@@ -34,7 +34,9 @@ export default [
     },
   },
   {
-    files: ['**/*.test.mjs', '*.config.js', 'vite.config.js'],
+    // Node'da çalışanlar: testler, yapılandırma ve tema regresyon düzeneği
+    // (tools/theme-check — uygulamanın parçası değil, dist'e girmez).
+    files: ['**/*.test.mjs', '*.config.js', 'vite.config.js', 'tools/**/*.mjs'],
     languageOptions: { globals: globals.node },
   },
 ]

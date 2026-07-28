@@ -2,7 +2,7 @@
 // Bu iki yüzey açık modda 2.30 / 2.89 ile AA'nın altındaydı; anxFill() /
 // anxPillStyle() ile tam opak zemine geçirildi (docs/LIGHT-MODE.md §4).
 //   node contrast-anxiety.mjs <dark|light>
-import { open, pixels, colorOn } from "./lib/page.mjs";
+import { open, pixels } from "./lib/page.mjs";
 import { cr, parse, hex, fmt } from "./lib/wcag.mjs";
 
 const theme = process.argv[2] || "light";

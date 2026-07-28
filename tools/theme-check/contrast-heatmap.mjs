@@ -80,7 +80,6 @@ console.log(`    "kayıt yok" ${hex(empty)} / sayfa zemini = ${cr(empty, pageBg)
 
 console.log("\n(c) LEJANT vs HARİTA — aynı görsel dil mi?");
 console.log("    (lejant karesi EKRANDAN okunuyor, token'dan değil)");
-const legend = pg.locator('div:has(> div[style*="border-radius: 3px"])').first();
 for (const [t, lo, hi, i] of [["low", 1, 3, 0], ["mid", 4, 6, 1], ["high", 7, 10, 2]]) {
   const sw = pg.locator('div[style*="width: 11px"]').nth(i);
   const bb = await sw.boundingBox();
