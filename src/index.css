@@ -259,12 +259,21 @@
   --today-ring:    rgba(0,0,0,0.45);
 
   /* ── Kaygı skalası ──
-     Kanallar koyulaştırıldı: alfa rampası (0.48–0.90) DEĞİŞMEDİĞİ için,
-     açık zeminde düşük değerlerin kaybolmaması ancak kanalın koyulmasıyla
-     sağlanabiliyor. En zayıf kare (v=1, alfa .50) artık #7fba aa civarı. */
-  --anx-low-rgb:  13,128,91;
-  --anx-mid-rgb:  156,95,8;
-  --anx-high-rgb: 200,30,90;
+     DİKKAT: --anx-*-rgb ile --anx-* AÇIK MODDA BİLEREK AYRIŞIR.
+       --anx-*      → lejant, seçili buton, durum etiketi. METİN taşıdığı ya da
+                      metin altında olduğu için Faz 2'de "AA'yı geçen EN AÇIK
+                      ton" olarak seçildi.
+       --anx-*-rgb  → SADECE anxColor(), yani ısı haritası ve rapor çubuğu.
+                      Orada metin yok; gereken şey OKUNABİLİRLİK değil ARALIK.
+     Açık modda sayfa zemini (L=0.874) ile --anx-low (L=0.163) arasında yalnızca
+     4.35:1 var; koyu modda (L=0.006 ↔ L=0.50) 9.8:1 dağıtılabiliyor. Bu yüzden
+     --anx-* değerleriyle çizilen rampa koyu modun ayrım gücüne ULAŞAMIYOR
+     (ölçüldü: bant sınırı 1.57 vs 2.75, en soluk kare↔sayfa 1.99 vs 3.34).
+     Kanallar bu yüzden ayrıca koyulaştırıldı; alfa rampasının açık mod dalıyla
+     birlikte çözüldü (docs/LIGHT-MODE.md §4 — anxColor). */
+  --anx-low-rgb:  7,74,52;
+  --anx-mid-rgb:  94,57,5;
+  --anx-high-rgb: 145,22,65;
   --anx-low:   #0d805b;
   --anx-mid:   #9c5f08;
   --anx-high:  #c81e5a;

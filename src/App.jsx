@@ -323,12 +323,24 @@ function remaining(dateStr) {
 function anxBand(v) {
   return !v ? null : v <= 3 ? "low" : v <= 6 ? "mid" : "high";
 }
-function anxColor(v) {
+// Alfa rampası AÇIK MODDA AYRI. Sebep: kontrast bir ORAN, ve açık zeminin
+// üstünde aynı alfa adımları çok daha küçük oranlar üretiyor. Koyu modun
+// rampası açık moda uygulandığında ölçülen sonuç (docs/LIGHT-MODE.md §4):
+//   bant sınırı 1.57:1 (koyu 2.75) · en soluk kare↔sayfa 1.99:1 (koyu 3.34)
+// Yalnız kanalları koyulaştırmak da yetmiyor — alfa rampası sabit tutulunca
+// hiçbir kanal üçlüsü koyu modun dört metriğini birden yakalayamıyor (arandı).
+// Aşağıdaki açık mod katsayıları --anx-*-rgb ile BİRLİKTE çözüldü; sonuç koyu
+// modu dört metrikte de yakalıyor ya da geçiyor. İkisi ayrı ayrı değiştirilemez.
+function anxColor(v, theme) {
   const b = anxBand(v);
   if (!b) return "var(--anx-empty)";
-  const a = b === "low" ? 0.3 + v * 0.2
-          : b === "mid" ? 0.3 + (v - 3) * 0.18
-          : 0.35 + (v - 6) * 0.13;
+  const a = theme === "light"
+    ? (b === "low" ? 0.40 + v * 0.20
+     : b === "mid" ? 0.40 + (v - 3) * 0.20
+     :               0.447 + (v - 6) * 0.1333)
+    : (b === "low" ? 0.3 + v * 0.2
+     : b === "mid" ? 0.3 + (v - 3) * 0.18
+     :               0.35 + (v - 6) * 0.13);
   return `rgba(var(--anx-${b}-rgb),${a.toFixed(2)})`;
 }
 function anxSolid(v) {
@@ -347,7 +359,7 @@ function anxSolid(v) {
 // üç bantta da 4.94–5.55:1. Isı haritası ve lejant dokunulmadan kalır,
 // alfa rampası orada zaten görünür. Koyu mod her iki yerde de değişmiyor.
 function anxFill(v, theme) {
-  return theme === "light" ? anxSolid(v) : anxColor(v);
+  return theme === "light" ? anxSolid(v) : anxColor(v, theme);
 }
 function anxPillStyle(v, theme) {
   if (theme === "light") return { background: anxSolid(v), color: "var(--on-accent)" };
@@ -1515,7 +1527,7 @@ function AnxietyTab({ log, onRate }) {
                   cursor:"pointer",
                   transform: val===v ? "scale(1.06)" : "scale(1)",
                   transition:"all 0.15s",
-                  boxShadow: val===v ? `0 4px 14px ${anxColor(v)}` : "none",
+                  boxShadow: val===v ? `0 4px 14px ${anxColor(v, theme)}` : "none",
                 }} className="num">{v}</button>
               ))}
             </div>
@@ -1541,7 +1553,7 @@ function AnxietyTab({ log, onRate }) {
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5 }}>
         {days.map(ds => (
-          <div key={ds} title={ds} style={{ aspectRatio:"1", borderRadius:7, background:anxColor(log[ds]||null), border:ds===d?"2px solid var(--today-ring)":"1px solid var(--border-grid)", position:"relative" }}>
+          <div key={ds} title={ds} style={{ aspectRatio:"1", borderRadius:7, background:anxColor(log[ds]||null, theme), border:ds===d?"2px solid var(--today-ring)":"1px solid var(--border-grid)", position:"relative" }}>
             {ds === d && <div style={{ position:"absolute", bottom:2, right:2, width:5, height:5, background:"var(--gold)", borderRadius:"50%" }} />}
           </div>
         ))}
@@ -1557,6 +1569,7 @@ function AnxietyTab({ log, onRate }) {
 
 // ── Report ───────────────────────────────────────────────────
 function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggleNotif, onChangeGrade, gradeInfo }) {
+  const { theme } = useTheme();
   const now  = new Date();
   const week = Array.from({length:7}, (_, i) => { const d = new Date(now); d.setDate(now.getDate()-6+i); return dayKey(d); });
   const studiedW = week.filter(d => studied.includes(d)).length;
@@ -1602,7 +1615,7 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const v = anxiety[d];
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div className="no-theme-anim" style={{ width:"100%", background:v?anxColor(v):"var(--track)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
+                <div className="no-theme-anim" style={{ width:"100%", background:v?anxColor(v, theme):"var(--track)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
                 <div style={{ fontSize:10, color:"var(--text-4)" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
