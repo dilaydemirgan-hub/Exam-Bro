@@ -335,6 +335,27 @@ function anxSolid(v) {
   const b = anxBand(v);
   return b ? `var(--anx-${b})` : "var(--anx-none)";
 }
+// ── Kaygı skalasının METİN taşıyan yüzeyleri ─────────────────
+// Koyu modda bant renginin alfa rampalı yıkaması metni rahat taşıyor.
+// Açık modda aynı yıkama beyaz karta doğru açılıyor ve kontrast çöküyor —
+// ÖLÇÜLDÜ: seçili buton 2.30:1, durum etiketi 2.89:1 (ikisi de AA altı).
+//
+// Yıkamayı zayıflatmak ÇÖZÜM DEĞİL: --anx-low (#0d805b) için HİÇBİR yüzde
+// 4.5'i geçmiyor (%8'de bile kalıyor) — §4'teki seri rozetiyle birebir aynı
+// olgu, zemini accent'e yaklaştırdıkça accent metnin kontrastı düşüyor.
+// Bu yüzden açık modda bant rengi TAM OPAK zemin olur, üstüne --on-accent:
+// üç bantta da 4.94–5.55:1. Isı haritası ve lejant dokunulmadan kalır,
+// alfa rampası orada zaten görünür. Koyu mod her iki yerde de değişmiyor.
+function anxFill(v, theme) {
+  return theme === "light" ? anxSolid(v) : anxColor(v);
+}
+function anxPillStyle(v, theme) {
+  if (theme === "light") return { background: anxSolid(v), color: "var(--on-accent)" };
+  return {
+    background: tint(anxSolid(v), "--tint-edge-2", null, `rgba(var(--anx-${anxBand(v)}-rgb),0.2)`),
+    color: anxSolid(v),
+  };
+}
 
 // ── Veri renklerinin soluk tonu ──────────────────────────────
 // Sınav (FIXED/OSYM/customs) ve psikoloji kategorisi renkleri VERİDİR, token
@@ -1418,7 +1439,7 @@ function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
         </Card>
       )}
       {list.map(g => (
-        <div key={g.id} style={{ background:"var(--surface-3)", border:`1px solid ${g.done?"var(--green-line)":"var(--border)"}`, borderRadius:"var(--r-md)", padding:"6px 6px 6px 8px", marginBottom:8, display:"flex", alignItems:"center", gap:4 }}>
+        <div key={g.id} className="themed" style={{ background:"var(--surface-3)", border:`1px solid ${g.done?"var(--green-line)":"var(--border)"}`, borderRadius:"var(--r-md)", padding:"6px 6px 6px 8px", marginBottom:8, display:"flex", alignItems:"center", gap:4 }}>
           <button onClick={() => { tap(); onToggle(d, g.id); }} aria-label={g.done ? `${g.text} — tamamlandı, geri al` : `${g.text} — tamamla`}
             style={{ width:44, height:44, background:"transparent", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, padding:0 }}>
             <span style={{ width:26, height:26, borderRadius:"50%", border:`2px solid ${g.done?"var(--green)":"var(--border-strong)"}`, background:g.done?"var(--green)":"transparent", display:"flex", alignItems:"center", justifyContent:"center", transition:"all 0.2s", color:"var(--on-green)" }}>
@@ -1448,7 +1469,7 @@ function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
       <div style={{ display:"flex", gap:8, marginTop:10 }}>
         <input value={inp} onChange={e => setInp(e.target.value)} onKeyDown={e => e.key === "Enter" && add()}
           onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 150)}
-          placeholder="Yeni hedef ekle..." aria-label="Yeni hedef"
+          placeholder="Yeni hedef ekle..." aria-label="Yeni hedef" className="themed"
           style={{ flex:1, background:"var(--surface-3)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"13px 16px", color:"var(--text-1)", fontSize:15 }} />
         <button onClick={add} className="pressable" aria-label="Hedefi ekle" style={{ background:"var(--grad-green)", border:"none", borderRadius:"var(--r-sm)", width:52, color:"var(--on-green)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <IconPlus size={22} />
@@ -1464,6 +1485,7 @@ function GoalsTab({ grade, goals, onAdd, onToggle, onDel }) {
 
 // ── Anxiety ──────────────────────────────────────────────────
 function AnxietyTab({ log, onRate }) {
+  const { theme } = useTheme();
   const d = today();
   const [val, setVal] = useState(log[d] || null);
   const pick = v => { tap(); setVal(v); onRate(d, v); };
@@ -1487,7 +1509,7 @@ function AnxietyTab({ log, onRate }) {
               {row.map(v => (
                 <button key={v} role="radio" aria-checked={val===v} aria-label={`${v}`} onClick={() => pick(v)} style={{
                   flex:1, height:48, borderRadius:"var(--r-sm)", minWidth:0,
-                  background: val===v ? anxColor(v) : "var(--surface-input)",
+                  background: val===v ? anxFill(v, theme) : "var(--surface-input)",
                   border: `2px solid ${val===v ? anxSolid(v) : "transparent"}`,
                   color: val===v ? "var(--on-accent)" : "var(--text-3)", fontSize:15, fontWeight:700,
                   cursor:"pointer",
@@ -1500,7 +1522,7 @@ function AnxietyTab({ log, onRate }) {
           ))}
         </div>
         {val
-          ? <div style={{ textAlign:"center", fontSize:16, fontWeight:600, color:anxSolid(val), padding:10, background:tint(anxSolid(val), "--tint-edge-2", null, `rgba(var(--anx-${anxBand(val)}-rgb),0.2)`), borderRadius:12, marginTop:8 }}>{label(val)}</div>
+          ? <div style={{ textAlign:"center", fontSize:16, fontWeight:600, padding:10, borderRadius:12, marginTop:8, ...anxPillStyle(val, theme) }}>{label(val)}</div>
           : <div style={{ textAlign:"center", fontSize:13, color:"var(--text-4)", marginTop:8 }}>1 = tamamen sakin &nbsp;·&nbsp; 10 = çok yüksek kaygı</div>
         }
       </Card>
@@ -1525,7 +1547,7 @@ function AnxietyTab({ log, onRate }) {
         ))}
       </div>
       <div style={{ textAlign:"center", marginTop:10, fontSize:11.5, color:"var(--text-4)" }}>her kare bir gün — bugün sağ altta işaretli</div>
-      <div style={{ marginTop:20, padding:"18px 20px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--green)" }}>
+      <div className="themed" style={{ marginTop:20, padding:"18px 20px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--green)" }}>
         <SectionLabel style={{ color:"var(--green)" }}>günün notu</SectionLabel>
         <div style={{ fontSize:14, color:"var(--text-2)", lineHeight:1.7 }}>{noteText}</div>
       </div>
