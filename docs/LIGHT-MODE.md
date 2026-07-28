@@ -19,13 +19,14 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 4'ü bitti** |
+| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 5'i bitti** |
 | 4 | Rapor sekmesine "Görünüm" seçici | ⬜ başlamadı |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
 | 7 | Doğrulama | ⬜ başlamadı |
 
-Commit geçmişi (yeniden eskiye): `2a671ad` faz3-4 · `ca15afb` fix(tema) ·
+Commit geçmişi (yeniden eskiye): `4d200f5` faz3-5 · `759a1df` fix(ısı haritası) ·
+`fe368f2` docs · `2a671ad` faz3-4 · `ca15afb` fix(tema) ·
 `0ec94bd` docs · `acdd868` faz3-3 · `edd7ec8` chore · `da1470f` docs ·
 `b6ad7b0` docs · `1529c3d` faz3-2 · `ce774a5` faz3-1 · `4536ddb` docs · `42f84dc` faz2 ·
 `7687f47` fix · `567de95` faz1 · `dc65b68` status-bar · `7379d41` (main'in ucu, dokunulmadı).
@@ -142,10 +143,59 @@ birebir aynı olgu: zemini accent'e yaklaştırdıkça accent metnin kontrastı 
 | mid | `#9c5f08` | 5.18:1 |
 | high | `#c81e5a` | 5.54:1 |
 
-**Isı haritası, lejant ve rapor grafiği DOKUNULMADI** — `anxColor()` değişmedi, alfa
-rampası oralarda zaten okunuyor. Karar tek yerde: `anxFill(v, theme)` (seçili buton) ve
-`anxPillStyle(v, theme)` (durum etiketi), ikisi de `src/App.jsx`'te `anxSolid`'in hemen
-altında. Koyu mod her ikisinde de eski `anxColor()`/`tint()` yolunu kullanmaya devam ediyor.
+Karar tek yerde: `anxFill(v, theme)` (seçili buton) ve `anxPillStyle(v, theme)` (durum
+etiketi), ikisi de `src/App.jsx`'te `anxSolid`'in hemen altında. Koyu mod her ikisinde de
+eski `anxColor()`/`tint()` yolunu kullanmaya devam ediyor.
+
+**Isı haritası rampası — `anxColor(v, theme)` (`759a1df`).**
+Isı haritası önce ölçülmeden "okunuyor" sayılmıştı; ölçülünce açık modun koyu modun çok
+altında olduğu görüldü. Ölçüm ekran görüntüsündeki gerçek pikselden (§9):
+
+| | koyu | açık (önce) | açık (sonra) |
+|---|---|---|---|
+| bant içi min | 1.296 | 1.225 | **1.279** |
+| bant sınırı min | 2.752 | 1.570 | **2.840** |
+| en soluk kare ↔ sayfa | 3.34 | 1.99 | **3.31** (1.4.11 ≥3) |
+| en soluk kare ↔ "kayıt yok" | 2.86 | 1.79 | **2.98** |
+
+**Kök sebep:** kontrast bir **oran**; açık zeminin üstünde aynı alfa adımları çok daha
+küçük oranlar üretir. Sayfa zemini (L=.874) ile `--anx-low` (L=.163) arasında yalnızca
+**4.35:1** dağıtılabiliyor, koyu modda (L=.006 ↔ L=.50) **9.8:1**.
+
+İki şey **birlikte** çözüldü — ayrı ayrı yetmiyor, ikisi de arandı:
+1. `--anx-*-rgb` açık modda koyulaştırıldı (`7,74,52` / `94,57,5` / `145,22,65`).
+   Bu token `--anx-*`'tan **ayrıdır**: `--anx-*` metin taşıdığı için "AA'yı geçen en açık
+   ton", `--anx-*-rgb` ise yalnızca `anxColor()`'da (ısı haritası + rapor kaygı grafiği),
+   orada metin yok — gereken **aralık**.
+2. `anxColor()`'ın açık mod alfa dalı: low/mid `0.60→1.00`, high `0.58→0.98`.
+
+> Yalnız alfayı değiştirmek → mevcut kanallarla 0 aday. Yalnız kanalı koyulaştırmak →
+> rampa sabitken 0 aday. **İkisi tek bir çözümdür, ayrı ayrı değiştirmeyin.**
+
+⚠️ **Koyu modda v=7 karesi sayfa zemininden 2.20:1** — 1.4.11'in altında. Koyu mod referans
+olduğu için dokunulmadı; açık mod aynı yerde 3.17 ile geçiyor.
+
+### Rapor grafikleri (grup 5'te ölçüldü)
+
+| | koyu | açık |
+|---|---|---|
+| grafik 1 en zayıf çubuk ↔ kart | 7.46 ✓ | 5.12 ✓ |
+| grafik 1 çubuk ↔ pasif kütük | 6.32 ✓ | 3.97 ✓ |
+| grafik 2 en zayıf çubuk ↔ kart | **2.89 ✗** | **3.46 ✓** |
+| grafik 2 çubuk ↔ pasif kütük | 2.45 ✗ | 2.69 ✗ |
+| `ProgressBar` dolgu ↔ iz | 8.29 ✓ | 3.87 ✓ |
+| `--track` ↔ kart | 1.18 ✗ | 1.29 ✗ |
+
+Açık mod **her satırda koyu moda eşit ya da ondan iyi**; kalan iki eksik koyu modda da var.
+
+**`--track` neden koyulaştırılmadı:** hiçbir değer "kartın üstünde görünür" (≥3:1) ile
+"dolgu ↔ iz" (≥3:1) kısıtlarını **birlikte** tutturamıyor (tarandı, 0 aday — `track.mjs`).
+Mevcut değer ödünleşimin doğru tarafında: bilgiyi taşıyan **dolgu sınırı** geçiyor, pasif
+bölge bilginin yokluğu.
+
+> **Not (renkle ilgisi yok, açık mod işi değil):** grafik 2'de çubuk yüksekliği `v*5.5px`,
+> "kayıt yok" kütüğü ise sabit `8px`. Yani **v=1 olan bir gün, hiç kayıt olmayan günden
+> daha KISA** görünüyor. Her iki modda da böyle. Ayrı ele alınmalı.
 
 ---
 
@@ -315,13 +365,18 @@ gerekmedi** — checkbox, öneri çipleri, ilerleme kartı, input ve boş durum 
 AA. `.themed`: hedef satırları, hedef input'u, "günün notu" kartı.
 Isı haritası, lejant ve rapor grafiği dokunulmadı.
 
+**5 ✅ rapor — `4d200f5`**
+`ReportTab` / `Stat` / `SettingsRow` / `ToggleSwitch`. **Renk değişikliği gerekmedi** —
+12 metnin ve toggle'ın tamamı açık modda geçiyor, çubuk grafikler her satırda koyu moda
+eşit ya da ondan iyi (§4 "Rapor grafikleri"). Kod değişikliği yalnızca `.themed`
+(Stat kutuları, haftalık özet bloğu). Faz 4'ün "Görünüm" seçicisi **bilerek eklenmedi**.
+
 ### Kalan gruplar (her biri ayrı commit + koyu/açık ekran görüntüsü)
 
-Not: aşağıdaki satır numaraları grup 3–4'ten sonra ~30 satır kaymıştır.
+Not: aşağıdaki satır numaraları grup 3–5'ten sonra ~30 satır kaymıştır.
 
 | # | Grup | Kapsam (`src/App.jsx`) | Yapılacaklar |
 |---|---|---|---|
-| 5 | **Rapor** | `ReportTab` ~1560–1650, `Stat` ~1685, `SettingsRow` ~1650, `ToggleSwitch` ~1665 | İki çubuk grafik (`--track`, `--grad-green-bar`), istatistik kutuları, ayarlar kartı, toggle. **Not:** çubuklar `.no-theme-anim` aldı (§8), ikinci grafik `anxColor()` kullanıyor — o dokunulmadı |
 | 6 | **Psikoloji hub + nefes + program** | `PsychologyHub` 895–977, `HubBar` 978, `LessonReader` 993–1027, `BreathingPlayer` 1028–1107, `BreathCircle` 1108–1132, `ProgramView` 1133–1185 | Chevron ikonuna `ink(…, "large")`; `--grad-breath` / `--grad-closing` açık karşılıkları zaten tanımlı, uygulamada doğrula; **BreathCircle transition'dan MUAF** |
 | 7 | **Paywall + overlay'ler** | `Paywall` 1186–1238, `ui.jsx` toast + `ConfirmSheet` | `--overlay-sheet` / `--overlay-modal` (%35), `--surface-modal`, `--handle`, `--shadow-toast` |
 
@@ -390,7 +445,7 @@ açılışta renk animasyonu istemiyoruz, `data-theme`'i FOUC script'i zaten yaz
 **`.themed` ALAN öğeler:** `S.root`, `S.header`, `S.nav`, `Card` (`ui.jsx`), `CountCard` kökü,
 ana sayfadaki motivasyon kartı, "Bugün Çalıştım" butonu, psikoloji köşesi kartı, Pro teaser,
 `ExamsTab` manuel ekleme ekranındaki 3 input, `GoalsTab` hedef satırları + hedef input'u,
-`AnxietyTab` "günün notu" kartı.
+`AnxietyTab` "günün notu" kartı, `Stat` kutuları, `ReportTab` haftalık özet bloğu.
 
 #### MUAF öğeler — `.no-theme-anim`
 Kendi `transform`/`width`/`height` animasyonları var; geçici kural da bunlara **dokunamaz**,
@@ -443,8 +498,9 @@ npx playwright install webkit
 
 Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
 `states.mjs` (etkileşimli durumlar), `animtest.mjs` (tema geçişi / `theme-anim`),
-`g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı ekranları ve kontrast ölçümü),
-`contrast.mjs` (WCAG hesabı), `final.mjs`
+`g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı), `heatmap.mjs` (ısı haritası rampası),
+`ramp.mjs`/`ramp3.mjs`/`ramp4.mjs` (rampa çözücüleri), `g5cap.mjs` + `g5contrast.mjs`
+(rapor), `track.mjs` (--track ödünleşimi), `contrast.mjs` (WCAG hesabı), `final.mjs`
 (56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
 `blocks.mjs` (koyu/açık token karşılaştırması).
 **Oturum değişirse bunlar da kaybolur** — grup 3'te `cap.mjs`/`diff.mjs`/`states.mjs`
@@ -511,6 +567,15 @@ const bg = [shot.data[i], shot.data[i+1], shot.data[i+2]];   // metnin uzağınd
 
 Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ölçüm
 2.30:1 dedi. Yeni bir yarı saydam yüzey eklenince aynı yöntemi kullan.
+
+⚠️ **İki tuzak** (ikisi de yaşandı):
+1. **Metinde piksel örneklemesi harfin üstüne düşebilir** → sahte `1.00:1`. Metinlerde
+   zemini DOM'dan çöz: ilk **opak** `background-color`'a kadar ataları tara
+   (`g5contrast.mjs` → `RESOLVE_BG`). Piksel örneklemesini yalnızca gerçekten yarı saydam
+   katmanlar için (çubuk, ısı haritası karesi, toggle) kullan.
+2. **"İlk bulunan" öğe en zayıf öğe değildir.** Grafik 2'de ilk çubuk ölçülünce 4.58
+   çıkmıştı; **en zayıf** çubuk seçilince 2.69. Bir dizi öğeyi ölçerken her zaman
+   en kötü örneği ara.
 
 ### Sürekli doğrulanacaklar
 - `npm run build` temiz.
@@ -604,7 +669,48 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | `--r-xl`, `--pink` gibi kullanılmayan token'lar | `--r-xl` önceden de kullanılmıyordu; zararsız |
 | Lint uyarısı `'Icon' is defined but never used` | Önceden mevcut, `main`'de de var |
 | **`.pressable` + `.themed` çakışması** | ✅ **çözüldü** — geçici `html.theme-anim` sınıfı (§8 Q). Ölçüm aşağıda |
+| **W — lejant ↔ ısı haritası görsel dili** | ⬜ **karar kullanıcıda** — aşağıda |
+| Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden kısa | ⬜ renk işi değil, ayrı ele alınacak (§4) |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
+
+### W — lejant, ısı haritası ve seçili buton aynı dili konuşuyor mu?
+
+Kaygı sekmesinde **üç** yüzey bant rengini gösteriyor: lejant kareleri, ısı haritası
+kareleri, seçili skala butonu + durum etiketi. Hangi token'ı kullandıkları:
+
+| Yüzey | Koyu | Açık |
+|---|---|---|
+| Lejant karesi | `--anx-*` (opak) | `--anx-*` (opak) |
+| Seçili buton / durum etiketi | `anxColor()` yıkaması | `--anx-*` (opak) — grup 4 |
+| Isı haritası karesi | `anxColor()` yıkaması | `anxColor()` yıkaması (koyulaştırılmış kanal) |
+
+Lejantın **bandın en koyu karesine** uzaklığı (ölçüldü):
+
+| Bant | Koyu | Açık |
+|---|---|---|
+| low | 1.22:1 (**pratikte aynı renk**) | 2.09:1 |
+| mid | 1.40:1 | 1.96:1 |
+| high | 1.27:1 | 1.53:1 |
+
+**Koyu modda lejant karesi ≈ bandın tam yoğunluktaki karesi** — lejant "bu bandın günü
+böyle görünür" diyor. **Açık modda bu bağ koptu:** lejant, kendi bandındaki *her* kareden
+daha açık; hiçbir kareyle eşleşmiyor. Kopuşun sebebi ısı haritası rampasının (`759a1df`)
+kendi koyulaştırılmış kanallarına taşınması — ki o zorunluydu (§4).
+
+Yani açık modda lejant **seçili butonla** aynı dili konuşuyor ama **haritayla** konuşmuyor;
+koyu modda tam tersi. Lejant `SectionLabel "son 35 gün"`in hemen üstünde ve haritayı
+etiketliyor.
+
+**Seçenekler:**
+- **A (önerilen) — lejant haritayı izlesin.** Açık modda lejant karesi `--anx-*` yerine
+  bandın tam yoğunluktaki harita rengini (`rgba(var(--anx-*-rgb),1)`) kullansın. Koyu
+  moddaki ilişki aynen geri gelir; seçili buton/etiket `--anx-*`'ta kalır (metin
+  kontrastı için zorunlu). Koyu mod değişmez.
+- **B — harita lejantı izlesin.** Ölçüldü, **mümkün değil** (§4).
+- **C — olduğu gibi bırak.** Lejant bandın *kimliğini* (yeşil/kahve/pembe) veriyor, birebir
+  renk anahtarı değil; hue üç yüzeyde de korunuyor.
+
+Karar verilmedi.
 
 ### `.pressable` + `.themed` — çözüldü (geçici sınıf)
 
