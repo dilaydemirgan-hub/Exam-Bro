@@ -1622,7 +1622,8 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
           })}
         </div>
       </Card>
-      <div style={{ padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--violet)", marginBottom:24 }}>
+      <div className="themed" style={{ padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--violet)", marginBottom:24 }}>
+        {/* 18px/700 → 18 < 18.66, WCAG'de BÜYÜK metin değil → 4.5:1 kovası */}
         <div style={{ fontSize:18, fontWeight:700, marginBottom:8, color:"var(--text-1)" }}>{msg}</div>
         <div style={{ fontSize:14, color:"var(--text-3)", lineHeight:1.65 }}>{detail}</div>
       </div>
@@ -1695,7 +1696,7 @@ function ToggleSwitch({ on }) {
 // ── Shared UI ────────────────────────────────────────────────
 function Stat({ icon, label, value, color }) {
   return (
-    <div style={{ background:"var(--surface-2)", border:"1px solid var(--border-soft)", borderRadius:16, padding:"16px 14px", textAlign:"center" }}>
+    <div className="themed" style={{ background:"var(--surface-2)", border:"1px solid var(--border-soft)", borderRadius:16, padding:"16px 14px", textAlign:"center" }}>
       <div style={{ color, display:"flex", justifyContent:"center" }}>{icon}</div>
       <div className="num" style={{ fontSize:21, fontWeight:700, color, marginTop:8 }}>{value}</div>
       <div style={{ fontSize:12, color:"var(--text-4)", marginTop:3 }}>{label}</div>
