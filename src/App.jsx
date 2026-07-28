@@ -617,9 +617,11 @@ export default function App() {
 
   return (
     <div style={S.root} className="themed">
+      {/* .no-theme-anim: boomFade/popIn animasyonlarının ortasından kesilmesin
+          — geçici tema geçişinden muaf (docs/LIGHT-MODE.md §8). */}
       {showBoom && (
-        <div style={S.boom}>
-          <div style={{ textAlign:"center", animation:"popIn 0.45s ease" }}>
+        <div style={S.boom} className="no-theme-anim">
+          <div style={{ textAlign:"center", animation:"popIn 0.45s ease" }} className="no-theme-anim">
             <div style={{
               width:104, height:104, borderRadius:"50%", margin:"0 auto",
               background:"var(--grad-boom)",
@@ -872,7 +874,8 @@ function CountCard({ ex }) {
         <div style={{ display:"flex", gap:8 }}>
           {[["d","gün"],["h","saat"],["m","dk"],["s","sn"]].map(([k, lbl]) => (
             <div key={k} style={{ flex:1, textAlign:"center" }}>
-              <div className="num" style={{
+              {/* .no-theme-anim: rakam kutuları geçici tema geçişinden muaf (§8) */}
+              <div className="num no-theme-anim" style={{
                 fontSize:22, fontWeight:700, color:cBig,
                 background:tint(ex.c, "--tint-soft", "14"), border:`1px solid ${tint(ex.c, "--tint-line", "22")}`,
                 borderRadius:"var(--r-sm)", padding:"8px 2px",
@@ -1112,12 +1115,13 @@ function BreathCircle({ scale, transSec, centerTop, centerBottom }) {
         position:"absolute", width:240, height:240, borderRadius:"50%",
         background:"var(--grad-breath-halo)",
       }} />
-      <div style={{
+      <div className="no-theme-anim" style={{
         width:200, height:200, borderRadius:"50%",
         background:"var(--grad-breath)",
         border:"2px solid var(--green-edge)",
         boxShadow:"var(--glow-breath)",
         transform:`scale(${scale})`,
+        // Nefes döngüsü mod değişiminde kesilmemeli → geçici tema geçişinden muaf (§8)
         transition:`transform ${transSec}s ease-in-out`,
         display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
         color:"var(--breath-text)",
@@ -1562,7 +1566,7 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const s=studied.includes(d), isT=d===today();
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div style={{ width:"100%", background:s?"var(--grad-green-bar)":"var(--track)", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
+                <div className="no-theme-anim" style={{ width:"100%", background:s?"var(--grad-green-bar)":"var(--track)", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
                 <div style={{ fontSize:10, color:isT?"var(--gold)":"var(--text-4)", fontWeight:isT?700:400 }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
@@ -1576,7 +1580,7 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const v = anxiety[d];
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div style={{ width:"100%", background:v?anxColor(v):"var(--track)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
+                <div className="no-theme-anim" style={{ width:"100%", background:v?anxColor(v):"var(--track)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
                 <div style={{ fontSize:10, color:"var(--text-4)" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );

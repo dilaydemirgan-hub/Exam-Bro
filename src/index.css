@@ -330,12 +330,39 @@ body {
 /* ── Tema geçişi ──────────────────────────────────────────────
    BİLEREK '*' seçicisine konmadı. Sadece yüzey/konteyner öğelerine
    elle .themed eklenir ve yalnızca background-color + color animasyonu
-   yapar. Muaf tutulanlar (sınıfı ALMAZ): BreathCircle, ilerleme
-   çubukları, "Süpersin!" overlay'i, geri sayım rakam kutuları —
-   bunlarda kendi transform/width/height animasyonları var, tema
-   geçişi eklenirse mod değişiminde sürüklenme görünüyor.
+   yapar. Muaf tutulanlar: BreathCircle, ilerleme çubukları,
+   "Süpersin!" overlay'i, geri sayım rakam kutuları — bunlarda kendi
+   transform/width/height animasyonları var, tema geçişi eklenirse mod
+   değişiminde sürüklenme görünüyor. Muafiyet iki katmanlı: bu öğeler
+   .themed/.pressable ALMAZ, ayrıca .no-theme-anim ile işaretlidir.
    prefers-reduced-motion aşağıdaki global blokta zaten kapatıyor. */
 .themed { transition: background-color 180ms ease, color 180ms ease; }
+
+/* ── Mod değişimi: GEÇİCİ kural ────────────────────────────────
+   Sorun: .pressable de 'transition' KISAYOLUNU yazıyor ve aynı
+   specificity'de (0,1,0) daha altta olduğu için .themed'i eziyor —
+   yani .pressable + .themed taşıyan butonlar mod değişiminde
+   sıçrıyordu.
+
+   Kalıcı bir '.pressable.themed { … }' kuralı ÇÖZÜM DEĞİL: o kural
+   her zaman aktif olurdu ve KOYU modda da durum değişimlerinde
+   ("Bugün Çalıştım" → doneToday: --grad-green'den --green-soft'a)
+   180ms'lik renk geçişi başlatırdı. Koyu modun davranışı değişemez.
+
+   Bunun yerine geçiş, kullanıcı tetiklediği ANDA geçici bir sınıfla
+   veriliyor: theme.jsx mod değişiminde <html>'e .theme-anim ekler ve
+   200ms sonra kaldırır. Diğer tüm zamanlarda .pressable'ın tap
+   animasyonu ve durum renkleri bugünkü haliyle birebir aynı kalır.
+   'html.theme-anim .pressable' (0,3,1) → .pressable'ın (0,1,0)
+   kısayolunu yener. '*' KULLANILMIYOR, '!important' KULLANILMIYOR. */
+html.theme-anim .themed:not(.no-theme-anim) {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+/* .pressable'ın kendi tap geçişi 200ms'lik pencerede de korunur. */
+html.theme-anim .pressable:not(.no-theme-anim) {
+  transition: transform 0.15s ease, opacity 0.15s ease,
+              background-color 180ms ease, color 180ms ease;
+}
 
 button {
   font-family: var(--font-ui);

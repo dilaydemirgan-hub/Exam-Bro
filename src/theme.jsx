@@ -9,7 +9,7 @@
 // Kayıtlı değer yoksa varsayılan "dark" — mevcut kullanıcıların uygulaması
 // güncellemeden sonra aynı görünmeli.
 
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 
 export const THEME_KEY = "exambro_theme";
 
@@ -62,7 +62,35 @@ async function applyStatusBar(theme) {
   } catch { /* plugin yoksa / web'de sessizce geç */ }
 }
 
-function applyTheme(theme) {
+// Mod değişimini yumuşatan GEÇİCİ sınıf.
+// Kalıcı bir CSS kuralı yazılamıyor: .pressable'ın transition kısayolunu
+// yenmek için yazılacak kalıcı kural koyu modda da durum değişimlerinde
+// renk geçişi başlatır ve koyu modun davranışını değiştirirdi.
+// Geçiş kullanıcı tetiklediği an açılıp hemen kapanıyor; kuralın kendisi
+// index.css'te 'html.theme-anim …' altında. Muaf öğeler .no-theme-anim.
+const ANIM_CLASS = "theme-anim";
+const ANIM_MS = 200;   // CSS'teki 180ms + küçük pay
+let animTimer = null;
+
+// transitionend'e güvenilmiyor: hiç transition başlamazsa (muaf öğe, ya da
+// değişmeyen bir renk) olay hiç gelmez ve sınıf üstte kalırdı. setTimeout
+// deterministik.
+function flashThemeAnim() {
+  try {
+    // Hareket azaltma tercihi varsa geçiş hiç açılmaz.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  } catch { /* matchMedia yoksa geçişi yine de uygula */ }
+  const el = document.documentElement;
+  el.classList.add(ANIM_CLASS);
+  clearTimeout(animTimer);
+  animTimer = setTimeout(() => el.classList.remove(ANIM_CLASS), ANIM_MS);
+}
+
+// animate: yalnızca kullanıcı/sistem kaynaklı GERÇEK mod değişiminde true.
+// İlk mount'ta false — data-theme'i FOUC script'i zaten yazmış oluyor,
+// açılışta renk animasyonu istemiyoruz.
+function applyTheme(theme, animate) {
+  if (animate) flashThemeAnim();   // sınıf, data-theme'den ÖNCE
   document.documentElement.setAttribute("data-theme", theme);
   applyThemeColor();
   applyStatusBar(theme);
@@ -75,10 +103,13 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => resolveTheme(readPreference()));
 
   // Tercih değişince çözümle ve <html data-theme> yaz.
+  // İlk çalıştırma mount — geçiş animasyonu yok.
+  const firstRun = useRef(true);
   useEffect(() => {
     const t = resolveTheme(preference);
     setTheme(t);
-    applyTheme(t);
+    applyTheme(t, !firstRun.current);
+    firstRun.current = false;
   }, [preference]);
 
   // "Sistem" seçiliyken telefonun modunu dinle — anında değişsin.
@@ -89,7 +120,7 @@ export function ThemeProvider({ children }) {
     const onChange = () => {
       const t = resolveTheme("system");
       setTheme(t);
-      applyTheme(t);
+      applyTheme(t, true);
     };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);

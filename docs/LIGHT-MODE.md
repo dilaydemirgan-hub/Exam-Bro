@@ -277,9 +277,9 @@ Ayrıca doğrulanan durumlar: gizli/görünür FIXED kartı, ÖSYM "Eklendi" roz
 seçili ders çipi, etkin/devre dışı "Sınav Ekle" butonu.
 
 > **`.themed` neden yalnızca input'lara eklendi:** `ExamsTab`'deki diğer yüzeyler ya
-> `Card` (zaten `.themed`), ya da `.pressable` butonlar. `.pressable` üzerinde `.themed`
-> **etkisiz** — aşağıdaki §13 maddesine bak. FIXED liste kartları ise kendi inline
-> `transition:"all 0.2s"`'i ile zaten geçiş yapıyor; oraya `.themed` eklemek ölü kod olurdu.
+> `Card` (zaten `.themed`), ya da `.pressable` butonlar — bunları artık geçici
+> `html.theme-anim .pressable` kuralı kapsıyor (§8 Q), ayrıca `.themed` gerekmiyor.
+> FIXED liste kartları ise kendi inline `transition:"all 0.2s"`'i ile zaten geçiş yapıyor.
 
 ### Kalan gruplar (her biri ayrı commit + koyu/açık ekran görüntüsü)
 
@@ -299,8 +299,9 @@ Not: aşağıdaki satır numaraları grup 3'ten sonra ~10 satır kaymıştır.
 4. **Bu dosyayı güncelle**, ayrı commit
 
 ### Faz 3 sonunda ayrıca
-- **S — geçiş senaryoları:** ① Paywall bottom sheet **açıkken** mod değiştir ② `BreathingPlayer`
-  **çalışırken** mod değiştir. İkisi de bozulmamalı.
+- **S — geçiş senaryoları:** ① Paywall bottom sheet **açıkken** mod değiştir ⬜
+  ② `BreathingPlayer` **çalışırken** mod değiştir ✅ (§13'te ölçüldü — nefes döngüsü
+  kesintisiz devam ediyor).
 - Kontrol listesini (`~/Downloads/exambro-acik-mod-widget-komutu.md`, Faz 3) madde madde geç.
 - `public/manifest.json`'daki `#080810` **hâlâ dokunulmadı** (PWA/Android) — Faz 3 sonunda
   kullanıcıyla konuşulacak.
@@ -318,28 +319,58 @@ Not: aşağıdaki satır numaraları grup 3'ten sonra ~10 satır kaymıştır.
 ## 8. Q / R — uygulama kuralları
 
 ### Q — `transition` kapsamı
-`.themed` sınıfı `src/index.css`'te:
+
+İki katmanlı: **kalıcı** `.themed` kuralı + mod değişimi anında açılan **geçici**
+`html.theme-anim` kuralı. `*` seçicisi ve `!important` **kullanılmıyor**.
+`prefers-reduced-motion: reduce` mevcut global blokta `transition-duration: 0.01ms
+!important` ile zaten kapatıyor; ayrıca geçici sınıf o tercihte **hiç eklenmiyor**.
 
 ```css
+/* kalıcı */
 .themed { transition: background-color 180ms ease, color 180ms ease; }
+
+/* geçici — yalnızca mod değişiminde 200ms boyunca */
+html.theme-anim .themed:not(.no-theme-anim)    { transition: background-color 180ms, color 180ms; }
+html.theme-anim .pressable:not(.no-theme-anim) { transition: transform .15s, opacity .15s,
+                                                             background-color 180ms, color 180ms; }
 ```
 
-`*` seçicisine **konmadı**; elle ekleniyor. `prefers-reduced-motion: reduce` mevcut global
-blokta `transition-duration: 0.01ms !important` ile zaten kapatıyor.
+#### Neden geçici sınıf — kalıcı kural neden olmaz
+`.pressable` de `transition` **kısayolunu** yazıyor ve aynı specificity'de (0,1,0) daha
+altta olduğu için `.themed`'i eziyordu: `.pressable`+`.themed` taşıyan butonlar mod
+değişiminde sıçrıyordu.
 
-**Sınıfı ALAN öğeler:** `S.root`, `S.header`, `S.nav`, `Card` (`ui.jsx`), `CountCard` kökü,
+Kalıcı bir `.pressable.themed { … }` kuralı çözüm **değil**: o kural her zaman aktif olur
+ve **koyu modda da** durum değişimlerinde renk geçişi başlatırdı — "Bugün Çalıştım"
+`doneToday` olunca `--grad-green` → `--green-soft` yumuşak geçerdi. Bu §2'yi çiğner.
+
+Geçiş bunun yerine **kullanıcı tetiklediği anda** veriliyor: `theme.jsx` → `flashThemeAnim()`
+`<html>`'e `.theme-anim` ekler, **200ms sonra `setTimeout` ile kaldırır**. (`transitionend`
+kullanılmıyor: hiç transition başlamazsa olay hiç gelmez ve sınıf üstte kalırdı.)
+`html.theme-anim .pressable` (0,3,1) → `.pressable`'ın (0,1,0) kısayolunu yener, ama
+**yalnızca o 200ms boyunca**. Diğer tüm zamanlarda tap animasyonu ve durum renkleri
+Faz 1 öncesiyle birebir aynı.
+
+Sınıf `data-theme`'den **önce** ekleniyor ve ilk mount'ta eklenmiyor (`firstRun` ref'i) —
+açılışta renk animasyonu istemiyoruz, `data-theme`'i FOUC script'i zaten yazmış oluyor.
+
+**`.themed` ALAN öğeler:** `S.root`, `S.header`, `S.nav`, `Card` (`ui.jsx`), `CountCard` kökü,
 ana sayfadaki motivasyon kartı, "Bugün Çalıştım" butonu, psikoloji köşesi kartı, Pro teaser,
 `ExamsTab` manuel ekleme ekranındaki 3 input.
 
-> ⚠️ Bunlardan `.pressable` de taşıyanlarda (`"Bugün Çalıştım"`, psikoloji köşesi, Pro
-> teaser) `.themed` **şu an etkisiz** — sebebi ve kararı §13'te.
+#### MUAF öğeler — `.no-theme-anim`
+Kendi `transform`/`width`/`height` animasyonları var; geçici kural da bunlara **dokunamaz**,
+yoksa mod değişimi animasyonun ortasından keserdi. Muafiyet **iki katmanlı**: bu öğeler
+`.themed`/`.pressable` almaz **ve** `.no-theme-anim` ile işaretlidir (seçicilerdeki
+`:not(.no-theme-anim)` bunu zorunlu kılar — ileride yanlışlıkla `.themed` eklense bile korunur).
 
-**Sınıftan MUAF (bilerek — kendi transform/width animasyonları var, tema geçişi eklenirse
-mod değişiminde sürüklenme görünüyor):**
-- `BreathCircle` (`transform` + `transition: transform Ns`)
-- `ProgressBar` ve rapor çubukları (`width` / `height` animasyonlu)
-- `S.boom` — "Süpersin!" overlay'i (`boomFade` animasyonu)
-- `CountCard` rakam kutuları
+| Öğe | Kendi animasyonu |
+|---|---|
+| `BreathCircle` iç çember | `transition: transform Ns` (inline) |
+| `ProgressBar` (iz + dolgu) | `width 0.4s` |
+| Rapor çubukları (2 grafik) | `height 0.3s` |
+| `S.boom` — "Süpersin!" overlay'i | `boomFade` / `popIn` |
+| `CountCard` rakam kutuları | — (geçiş istenmiyor) |
 
 ### R — `StatusBar` eşlemesi (plugin `.d.ts`'inden teyit edildi, ezberden yazmayın)
 
@@ -377,7 +408,8 @@ npx playwright install webkit
 ```
 
 Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
-`states.mjs` (etkileşimli durumlar), `contrast.mjs` (WCAG hesabı), `final.mjs`
+`states.mjs` (etkileşimli durumlar), `animtest.mjs` (tema geçişi / `theme-anim`),
+`contrast.mjs` (WCAG hesabı), `final.mjs`
 (56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
 `blocks.mjs` (koyu/açık token karşılaştırması).
 **Oturum değişirse bunlar da kaybolur** — grup 3'te `cap.mjs`/`diff.mjs`/`states.mjs`
@@ -518,33 +550,28 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | `manifest.json` `#080810` | ⬜ dokunulmadı, Faz 3 sonunda konuşulacak |
 | `--r-xl`, `--pink` gibi kullanılmayan token'lar | `--r-xl` önceden de kullanılmıyordu; zararsız |
 | Lint uyarısı `'Icon' is defined but never used` | Önceden mevcut, `main`'de de var |
-| **`.pressable` + `.themed` çakışması** | ⬜ **karar kullanıcıda** — aşağıya bak |
+| **`.pressable` + `.themed` çakışması** | ✅ **çözüldü** — geçici `html.theme-anim` sınıfı (§8 Q). Ölçüm aşağıda |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
 
-### `.pressable` + `.themed` — tema geçişi düşüyor
+### `.pressable` + `.themed` — çözüldü (geçici sınıf)
 
-`index.css`'te iki sınıf da `transition` kısayolunu yazıyor ve **ikisi de (0,1,0)
-specificity**. `.themed` 338. satırda, `.pressable` 360. satırda → kaynak sırası gereği
-`.pressable` kazanıyor ve `.themed`'in geçişini tamamen eziyor. WebKit'te ölçüldü:
+Mekanizma ve gerekçe **§8 Q**'da. Doğrulama gerçek kod yolundan yapıldı: `preference`
+`system`'e alınıp Playwright `emulateMedia({colorScheme})` ile `prefers-color-scheme`
+değiştirildi → `theme.jsx`'in mq dinleyicisi → `applyTheme(t, true)` → `flashThemeAnim()`.
+Sınıf elle eklenmedi. Betik: scratchpad'de `animtest.mjs`.
 
-```
-S.root (.themed)                     → background-color 0.18s, color 0.18s
-"Bugün Çalıştım" (.pressable .themed)→ transform 0.15s, opacity 0.15s   ← tema geçişi YOK
-```
+| Ölçüm | Dingin hal | Mod değişimi anı (200ms) | Pencere kapanınca |
+|---|---|---|---|
+| `html.theme-anim` | `false` | `true` | `false` |
+| `.pressable.themed` | `transform .15s, opacity .15s` | `… + background-color .18s, color .18s` | `transform .15s, opacity .15s` |
+| `.themed` (`S.root`) | `background-color .18s, color .18s` | aynı | aynı |
+| rakam kutusu (muaf) | `all` (geçiş yok) | **değişmedi** | değişmedi |
 
-Etkilenenler grup 1–2'den geliyor: "Bugün Çalıştım", psikoloji köşesi kartı, Pro teaser.
-**Statik görünüm etkilenmiyor** (piksel farkı 0), yalnızca mod değiştirirken bu üç buton
-animasyon yerine anında sıçrıyor.
-
-**Grup 3'te bilerek düzeltilmedi.** Tek satırlık düzeltmesi var:
-
-```css
-.pressable.themed { transition: transform .15s ease, opacity .15s ease,
-                                background-color 180ms ease, color 180ms ease; }
-```
-
-Ama bu, arka planı **duruma göre değişen** butonlarda (`"Bugün Çalıştım"` →
-`doneToday` olunca `--grad-green` → `--green-soft`) koyu modda da 180ms'lik bir renk
-geçişi başlatır. Yani **koyu modun davranışı değişir** — §2'deki kırmızı çizgi.
-Bu yüzden ölü `.themed` eklemek yerine durum kullanıcıya bırakıldı; Faz 3 sonunda
-"geçiş senaryoları" maddesiyle birlikte karara bağlanacak.
+- **(a)** Üç buton ("Bugün Çalıştım", psikoloji köşesi, Pro teaser) mod değişiminde artık sıçramıyor.
+- **(b)** Koyu modda tap animasyonu ve `doneToday` renk değişimi **değişmedi** — butona
+  tıklandıktan sonra bile `transition` hâlâ yalnızca `transform/opacity`.
+- **(c)** `BreathingPlayer` çalışırken (`kutu-nefesi`, ücretsiz) mod değiştirildi:
+  çemberin `transition: transform 4s ease-in-out` değeri geçiş penceresinde **birebir aynı**
+  kaldı, geri sayım 4 → 1 → 3 diye **adım sınırını geçerek** ilerlemeye devam etti.
+- **(d)** Koyu mod piksel farkı **0** (home · exams · report · **breath**).
+- `prefers-reduced-motion: reduce`: `data-theme` yine değişiyor, `.theme-anim` **hiç eklenmiyor**.

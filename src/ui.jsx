@@ -99,11 +99,13 @@ export function EmptyState({ icon, title, body, style }) {
 }
 
 // ── Progress bar ─────────────────────────────────────────────
+// .no-theme-anim: kendi width animasyonu var, mod değişimindeki geçici
+// tema geçişinden muaf (docs/LIGHT-MODE.md §8).
 export function ProgressBar({ pct, gradient = "linear-gradient(90deg,var(--green),var(--blue))" }) {
   return (
-    <div role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}
+    <div role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="no-theme-anim"
       style={{ background: "var(--track)", borderRadius: 999, height: 8, overflow: "hidden" }}>
-      <div style={{ background: gradient, height: "100%", width: `${pct}%`, borderRadius: 999, transition: "width 0.4s ease" }} />
+      <div className="no-theme-anim" style={{ background: gradient, height: "100%", width: `${pct}%`, borderRadius: 999, transition: "width 0.4s ease" }} />
     </div>
   );
 }
