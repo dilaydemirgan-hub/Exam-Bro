@@ -18,7 +18,7 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 devam ediyor |
+| 3 | Eksiksiz uygulama | 🔄 7 gruptan 2'si bitti |
 | 4 | Rapor sekmesine "Görünüm" seçici | ⬜ |
 | 5 | iOS widget'ları | ⬜ (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ |
@@ -211,8 +211,8 @@ Sadece tema değişiminde değil, **uygulama ön plana geldiğinde de** (resume 
 2. **BreathingPlayer ÇALIŞIRKEN** mod değiştir → sayaç/animasyon bozulmamalı.
 
 ### T — Commit grupları (her grup ayrı commit + koyu/açık ekran görüntüsü)
-1. ⬜ kök + nav + header
-2. ⬜ ana sayfa + geri sayım (`ink()` burada devreye giriyor)
+1. ✅ kök + nav + header — `ce774a5`
+2. ✅ ana sayfa + geri sayım — `1529c3d` (`ink()` devrede, `src/ink.js` + `npm test`)
 3. ⬜ sınavlar (liste / ÖSYM / manuel + date picker)
 4. ⬜ hedefler + kaygı
 5. ⬜ rapor
@@ -237,10 +237,20 @@ Ayrıca:
 
 ## 8. Test / doğrulama araçları
 
+**`npm test`** → `src/ink.test.mjs`. ink() sözleşmesini ve sabitlerin
+`index.css` ile eşleştiğini doğrular (drift koruması).
+
+**Koyu mod regresyon testi (piksel farkı).** Faz 2 durumundan alınmış referans
+ekran görüntüleri `base-*.png`; her grup sonrası `new-*.png` alınıp
+`diff.mjs` ile karşılaştırılıyor, sonuç **0 piksel** olmalı.
+⚠️ Saat `pg.clock.setFixedTime` ile dondurulmalı — yoksa geri sayımın
+saniyeleri sahte fark üretiyor (ilk denemede 1488 piksel yanılttı).
+
 Playwright + WebKit **kullanıcının reposuna değil**, scratchpad'e kuruldu.
 Ekran görüntüsü ve kontrast betikleri:
 `/private/tmp/claude-501/-Users-dilaydemirgan-Desktop-app-exam-bro/<oturum>/scratchpad/`
-(`contrast.mjs`, `final.mjs`, `shot.mjs`, `light.mjs`, `mixtest.mjs`, `blocks.mjs`).
+(`contrast.mjs`, `final.mjs`, `cap.mjs`, `diff.mjs`, `mixtest.mjs`, `blocks.mjs`).
+`node cap.mjs <dark|light> <çıktı.png> [tab:Rapor|radio:8|full…]`
 Oturum değişirse yeniden kurulmaları gerekir — `npm i playwright && npx playwright install webkit`.
 
 Sürekli doğrulanması gerekenler:
