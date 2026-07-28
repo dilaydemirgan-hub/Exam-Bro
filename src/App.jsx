@@ -4,6 +4,8 @@ import { premiumContent, premiumCategoryOrder } from "./premiumContent";
 import { getExamTarget } from "./config/examDates";
 import { scheduleDailyNotifications, cancelDailyNotifications, refreshIfEnabled, detectLegacyEnabled, NOTIF_HOUR } from "./notifications";
 import { useToast, ConfirmSheet, Card, SectionLabel, EmptyState, ProgressBar } from "./ui";
+import { useTheme } from "./theme.jsx";
+import { ink } from "./ink";
 import {
   IconHome, IconCalendar, IconTarget, IconPulse, IconChart, IconFlame,
   IconLock, IconChevronRight, IconChevronLeft, IconX, IconPlus, IconCheck, IconBell,
@@ -353,6 +355,7 @@ function tint(color, token, fallbackAlpha, fallbackColor) {
   if (SUPPORTS_MIX) return `color-mix(in srgb, ${color} var(${token}), transparent)`;
   return fallbackColor || `${color}${fallbackAlpha}`;
 }
+
 // Breathing phase from a step label (Turkish): "...al" = inhale, "...ver" = exhale, else hold
 function phaseOf(label) {
   const l = (label || "").toLowerCase().trim();
@@ -753,12 +756,12 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
   return (
     <div className="fadeup">
       {/* Motivation */}
-      <div style={{ marginBottom:14, padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--violet)" }}>
+      <div className="themed" style={{ marginBottom:14, padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)", borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--violet)" }}>
         <SectionLabel style={{ color:"var(--violet)", marginBottom:10 }}>bugün</SectionLabel>
         <div style={{ fontSize:17.5, color:"var(--text-1)", lineHeight:1.6, fontStyle:"italic" }}>{motivText}</div>
       </div>
       {/* Studied button */}
-      <button className="pressable" onClick={onStudied} aria-label={doneToday ? "Bugün çalıştın" : "Bugün çalıştım olarak işaretle"} style={{
+      <button className="pressable themed" onClick={onStudied} aria-label={doneToday ? "Bugün çalıştın" : "Bugün çalıştım olarak işaretle"} style={{
         width:"100%", marginBottom:14, padding:"17px 20px",
         background: doneToday ? "var(--green-soft)" : "var(--grad-green)",
         border: doneToday ? "1px solid var(--green-edge)" : "none",
@@ -793,7 +796,7 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
         </>
       )}
       {/* CBT — daily free tip, tappable to open the full Psikoloji hub */}
-      <button onClick={() => { tap(); onOpenPsych(); }} className="pressable" style={{
+      <button onClick={() => { tap(); onOpenPsych(); }} className="pressable themed" style={{
         display:"block", width:"100%", textAlign:"left", cursor:"pointer", marginTop:8, marginBottom:4,
         padding:"20px 22px", background:"var(--surface-1)", border:"1px solid var(--border-soft)",
         borderRadius:"var(--r-lg)", borderLeft:"3px solid var(--blue)", color:"inherit",
@@ -810,7 +813,7 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
       </button>
       {/* Premium teaser */}
       {!isPremium && (
-        <button onClick={() => { tap(); onOpenPsych(); }} className="pressable" style={{
+        <button onClick={() => { tap(); onOpenPsych(); }} className="pressable themed" style={{
           display:"flex", width:"100%", textAlign:"left", cursor:"pointer", marginTop:12,
           padding:"16px 20px", background:"var(--grad-pro)",
           border:"1px solid var(--violet-line-2)", borderRadius:"var(--r-lg)", alignItems:"center", gap:14, color:"inherit",
@@ -827,6 +830,14 @@ function HomeTab({ motivText, cbt, doneToday, streak, onStudied, exams, onOpenPs
   );
 }
 function CountCard({ ex }) {
+  const { theme } = useTheme();
+  // Sınav rengi VERİ. Metin/anlamlı grafik olarak kullanıldığı yerde açık modda
+  // ink()'ten geçer (docs/LIGHT-MODE.md §6 — kova dağılımı orada):
+  //   cBig  → başlık 20px/700 ve rakamlar 22px/700 (büyük metin) + sol şerit (grafik) → 3:1
+  //   cText → "Sınav günü!" 18px/700 (18 < 18.66, büyük metin DEĞİL)          → 4.5:1
+  // Rakam kutusunun zemini ve kenarlığı metin değil → ink() YOK, tint() aynen.
+  const cBig  = ink(ex.c, theme, "large");
+  const cText = ink(ex.c, theme);
   // FIXED sınav → config'ten canlı hedef (kendini yenileyen). Custom → kendi tarihi.
   const info       = examInfoFor(ex);
   const targetDate = info ? info.date : ex.date;
@@ -835,14 +846,14 @@ function CountCard({ ex }) {
   const r          = remaining(targetDate);
   const title      = isEstimate ? `${ex.n} (tahmini)` : ex.n;
   return (
-    <div style={{
+    <div className="themed" style={{
       background:"var(--surface-2)", border:"1px solid var(--border-soft)",
-      borderLeft:`3px solid ${ex.c}`, borderRadius:"var(--r-lg)",
-      padding:"18px 20px", marginBottom:12,
+      borderLeft:`3px solid ${cBig}`, borderRadius:"var(--r-lg)",
+      boxShadow:"var(--shadow-card)", padding:"18px 20px", marginBottom:12,
     }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:14 }}>
         <div>
-          <div style={{ fontSize:20, fontWeight:700, color:ex.c, letterSpacing:-0.2 }}>{title}</div>
+          <div style={{ fontSize:20, fontWeight:700, color:cBig, letterSpacing:-0.2 }}>{title}</div>
           {ex.sub && <div style={{ fontSize:13, color:"var(--text-4)", marginTop:2 }}>{ex.sub}</div>}
         </div>
         {!isExamDay && !r.done && (
@@ -854,7 +865,7 @@ function CountCard({ ex }) {
         )}
       </div>
       {isExamDay ? (
-        <div style={{ fontSize:18, fontWeight:700, color:ex.c, padding:"4px 0" }}>Sınav günü! Başarılar 🍀</div>
+        <div style={{ fontSize:18, fontWeight:700, color:cText, padding:"4px 0" }}>Sınav günü! Başarılar 🍀</div>
       ) : r.done ? (
         <div style={{ fontSize:15, color:"var(--text-3)" }}>Sınav geçti 🎉</div>
       ) : (
@@ -862,7 +873,7 @@ function CountCard({ ex }) {
           {[["d","gün"],["h","saat"],["m","dk"],["s","sn"]].map(([k, lbl]) => (
             <div key={k} style={{ flex:1, textAlign:"center" }}>
               <div className="num" style={{
-                fontSize:22, fontWeight:700, color:ex.c,
+                fontSize:22, fontWeight:700, color:cBig,
                 background:tint(ex.c, "--tint-soft", "14"), border:`1px solid ${tint(ex.c, "--tint-line", "22")}`,
                 borderRadius:"var(--r-sm)", padding:"8px 2px",
               }}>{pad(r[k])}</div>
