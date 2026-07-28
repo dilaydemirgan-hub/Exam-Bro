@@ -1257,8 +1257,12 @@ function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
     [<IconClock size={19} key="c" />,   "Erteleme programı",           "5 günlük rehberli mini program"],
   ];
   return (
-    <div style={S.modalWrap} onClick={onClose}>
-      <div style={S.modalCard} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Exam Bro Pro">
+    // .themed: paywall AÇIKKEN mod değişebiliyor (§7 S senaryosu). Perde ve kart
+    // renkleri iki modda farklı; geçiş verilmezse sayfanın geri kalanı yumuşak
+    // geçerken overlay sıçrıyor. Kendi animasyonları `animation` (sheetUp), yani
+    // geçici html.theme-anim kuralının verdiği `transition` onları kesmiyor.
+    <div style={S.modalWrap} className="themed" onClick={onClose}>
+      <div style={S.modalCard} className="themed" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Exam Bro Pro">
         <div style={{ width:36, height:4, borderRadius:999, background:"var(--handle)", margin:"0 auto 18px" }} />
         <div style={{ textAlign:"center", marginBottom:6 }}>
           <div style={{ color:"var(--violet)", display:"flex", justifyContent:"center" }}><IconSparkle size={36} /></div>

@@ -15,7 +15,9 @@ export function useToast() {
     timer.current = setTimeout(() => setMsg(null), ms);
   }, []);
   const toastEl = msg ? (
-    <div role="status" aria-live="polite" style={{
+    // .themed: toast ekranda dururken mod değişebilir (§8). Kendi girişi
+    // `animation` (toastIn) olduğu için geçici transition kuralıyla çakışmıyor.
+    <div role="status" aria-live="polite" className="themed" style={{
       position: "fixed", left: "50%", bottom: "calc(104px + env(safe-area-inset-bottom))",
       transform: "translateX(-50%)", zIndex: 500,
       background: "var(--surface-toast)", border: "1px solid var(--border)",
@@ -33,12 +35,14 @@ export function useToast() {
 export function ConfirmSheet({ open, title, body, confirmLabel = "Onayla", danger = false, onConfirm, onCancel }) {
   if (!open) return null;
   return (
-    <div onClick={onCancel} style={{
+    // .themed: sheet açıkken mod değişebilir — perde (--overlay-sheet) ve yüzey
+    // (--surface-sheet) iki modda farklı. Paywall ile aynı gerekçe (App.jsx).
+    <div onClick={onCancel} className="themed" style={{
       position: "fixed", inset: 0, zIndex: 450, background: "var(--overlay-sheet)",
       display: "flex", alignItems: "flex-end", justifyContent: "center",
       backdropFilter: "blur(4px)", animation: "fadein 0.2s ease",
     }}>
-      <div onClick={e => e.stopPropagation()} role="alertdialog" aria-modal="true" aria-label={title} style={{
+      <div onClick={e => e.stopPropagation()} className="themed" role="alertdialog" aria-modal="true" aria-label={title} style={{
         width: "100%", maxWidth: 480, background: "var(--surface-sheet)",
         borderTopLeftRadius: 24, borderTopRightRadius: 24,
         border: "1px solid var(--border)", borderBottom: "none",

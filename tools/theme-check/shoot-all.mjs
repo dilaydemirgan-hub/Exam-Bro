@@ -7,6 +7,9 @@
 import { mkdirSync } from "fs";
 import { open, runSteps } from "./lib/page.mjs";
 
+// "viewport" işaretli ekranlar tam sayfa DEĞİL, yalnızca görünen alan çekilir:
+// overlay'ler position:fixed ve tüm viewport'u kaplıyor; fullPage çekimde
+// arkalarındaki kaydırılabilir sayfa boyu belirleyici oluyor ve gürültü üretiyor.
 export const SCREENS = {
   home:        [],
   exams:       ["tab:Sınavlar"],
@@ -19,6 +22,10 @@ export const SCREENS = {
   hub:         ["btn:Psikoloji"],
   "psych-cat": ["btn:Psikoloji", "btn:Nefes & Gevşeme"],
   breath:      ["btn:Psikoloji", "btn:Nefes & Gevşeme", "btn:Kutu Nefesi"],
+  // Grup 7 — overlay'ler
+  paywall:     ["btn:Psikoloji", "btn:Nefes & Gevşeme", "btn:4-7-8 Uyku Nefesi", "viewport"],
+  confirm:     ["tab:Rapor", "btn:Tüm verileri sıfırla", "viewport"],
+  toast:       ["tab:Rapor", "btn:Günlük hatırlatma", "viewport"],
 };
 
 const [theme, prefix] = process.argv.slice(2);
@@ -50,7 +57,9 @@ const storage = {
 
 for (const [name, steps] of Object.entries(SCREENS)) {
   const { browser, page } = await open({ theme, storage });
-  const full = await runSteps(page, [...steps, "full"]);
+  const viewportOnly = steps.includes("viewport");
+  const full = await runSteps(page,
+    viewportOnly ? steps.filter(s => s !== "viewport") : [...steps, "full"]);
   const path = new URL(`./shots/${prefix}-${name}.png`, import.meta.url).pathname;
   await page.screenshot({ path, fullPage: full, animations: "disabled" });
   await browser.close();
