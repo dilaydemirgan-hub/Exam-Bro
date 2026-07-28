@@ -19,13 +19,14 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 5'i bitti** |
+| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 6'sı bitti** |
 | 4 | Rapor sekmesine "Görünüm" seçici | ⬜ başlamadı |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
 | 7 | Doğrulama | ⬜ başlamadı |
 
-Commit geçmişi (yeniden eskiye): `4d200f5` faz3-5 · `759a1df` fix(ısı haritası) ·
+Commit geçmişi (yeniden eskiye): `c78a02c` faz3-6 · `15588be` docs · `97bcef8` fix(grafik+W) ·
+`4d200f5` faz3-5 · `759a1df` fix(ısı haritası) ·
 `fe368f2` docs · `2a671ad` faz3-4 · `ca15afb` fix(tema) ·
 `0ec94bd` docs · `acdd868` faz3-3 · `edd7ec8` chore · `da1470f` docs ·
 `b6ad7b0` docs · `1529c3d` faz3-2 · `ce774a5` faz3-1 · `4536ddb` docs · `42f84dc` faz2 ·
@@ -324,7 +325,7 @@ yuvarlamak eşiğin bir tık altına düşürüyor: `#ff9736` normal kovada **4.
 | `CountCard` sınav başlığı | ~849 | 20px/700 | ≥18.66 bold | ✅ |
 | `CountCard` geri sayım rakamları | ~875 | 22px/700 | ≥18.66 bold | ✅ |
 | `CountCard` sol kenar şeridi | ~843 | 3px | anlamlı grafik (sınav kimliği) | ✅ |
-| `PsychologyHub` kategori/öğe chevron ikonu | ~966/975 | 18px | anlamlı grafik (gezinme) | ⬜ |
+| `PsychologyHub` kategori/öğe chevron ikonu | ~1024/994 | 18px | anlamlı grafik (gezinme) | ✅ |
 
 `large` markayı gerçekten koruyor: TYT `#9d5cff` → `#9c5bfd` (%99). Normal kovada olsaydı
 `#7848c4` (%74) olacaktı.
@@ -391,14 +392,22 @@ Isı haritası, lejant ve rapor grafiği dokunulmadı.
 eşit ya da ondan iyi (§4 "Rapor grafikleri"). Kod değişikliği yalnızca `.themed`
 (Stat kutuları, haftalık özet bloğu). Faz 4'ün "Görünüm" seçicisi **bilerek eklenmedi**.
 
+**6 ✅ psikoloji hub + nefes + program — `c78a02c`**
+`PsychologyHub` / `HubBar` / `LessonReader` / `BreathingPlayer` / `BreathCircle` /
+`ProgramView`. İki chevron `ink(…, "large")`'a bağlandı — ölçülen değerler §6'daki
+hesaplanmış tabloyla birebir tutuyor (`#9c5bfd` / `#109773` / `#ae7e0c`, açık modda
+3.22–3.69:1). `--grad-breath` / `--grad-closing` uygulamada doğrulandı (çember sayacı
+8.92:1, "sn" 5.28:1). **S senaryosu tekrar test edildi** — `BreathCircle` muafiyeti
+çalışıyor, nefes döngüsü mod değişiminde kesilmiyor. `.themed`: "aklında kalsın" kutusu,
+`ProgramView` gün kartı ve "bugünkü görev" kutusu.
+
 ### Kalan gruplar (her biri ayrı commit + koyu/açık ekran görüntüsü)
 
 Not: aşağıdaki satır numaraları grup 3–5'ten sonra ~30 satır kaymıştır.
 
 | # | Grup | Kapsam (`src/App.jsx`) | Yapılacaklar |
 |---|---|---|---|
-| 6 | **Psikoloji hub + nefes + program** | `PsychologyHub` 895–977, `HubBar` 978, `LessonReader` 993–1027, `BreathingPlayer` 1028–1107, `BreathCircle` 1108–1132, `ProgramView` 1133–1185 | Chevron ikonuna `ink(…, "large")`; `--grad-breath` / `--grad-closing` açık karşılıkları zaten tanımlı, uygulamada doğrula; **BreathCircle transition'dan MUAF** |
-| 7 | **Paywall + overlay'ler** | `Paywall` 1186–1238, `ui.jsx` toast + `ConfirmSheet` | `--overlay-sheet` / `--overlay-modal` (%35), `--surface-modal`, `--handle`, `--shadow-toast` |
+| 7 | **Paywall + overlay'ler** | `Paywall` ~1246–1300, `ui.jsx` toast + `ConfirmSheet` | `--overlay-sheet` / `--overlay-modal` (%35), `--surface-modal`, `--handle`, `--shadow-toast` |
 
 ### Grup sonrası her seferinde
 1. `npm run build` + `npm run lint` + `npm test`
@@ -518,7 +527,7 @@ npx playwright install webkit
 
 Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
 `states.mjs` (etkileşimli durumlar), `animtest.mjs` (tema geçişi / `theme-anim`),
-`g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı), `heatmap.mjs` (ısı haritası rampası),
+`g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı), `g6cap.mjs` + `g6contrast.mjs` + `chev.mjs` (psikoloji), `heatmap.mjs` (ısı haritası rampası),
 `ramp.mjs`/`ramp3.mjs`/`ramp4.mjs` (rampa çözücüleri), `bars.mjs` (rapor çubuğu arama), `g5cap.mjs` + `g5contrast.mjs`
 (rapor), `track.mjs` (--track ödünleşimi), `contrast.mjs` (WCAG hesabı), `final.mjs`
 (56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
