@@ -181,21 +181,41 @@ olduğu için dokunulmadı; açık mod aynı yerde 3.17 ile geçiyor.
 |---|---|---|
 | grafik 1 en zayıf çubuk ↔ kart | 7.46 ✓ | 5.12 ✓ |
 | grafik 1 çubuk ↔ pasif kütük | 6.32 ✓ | 3.97 ✓ |
-| grafik 2 en zayıf çubuk ↔ kart | **2.89 ✗** | **3.46 ✓** |
-| grafik 2 çubuk ↔ pasif kütük | 2.45 ✗ | 2.69 ✗ |
+| grafik 2 en zayıf çubuk ↔ kart | **2.89 ✗** | 3.46 → **4.49 ✓** |
+| grafik 2 çubuk ↔ pasif kütük | 2.45 ✗ | 2.69 ✗ → **3.49 ✓** |
 | `ProgressBar` dolgu ↔ iz | 8.29 ✓ | 3.87 ✓ |
-| `--track` ↔ kart | 1.18 ✗ | 1.29 ✗ |
+| pasif kütük ↔ kart (**kenarlıkla**) | 1.18 ✗ | 1.29 ✗ → **3.87 ✓** |
+| `ProgressBar` iz ↔ kart (**outline ile**) | 1.18 ✗ | 1.29 ✗ → **4.20 ✓** |
 
-Açık mod **her satırda koyu moda eşit ya da ondan iyi**; kalan iki eksik koyu modda da var.
+**Açık modda hepsi geçiyor.** Koyu moddaki iki eksik (grafik 2'nin 2.89 / 2.45'i) mevcut
+borç olarak duruyor — koyu mod referans, dokunulmadı.
 
-**`--track` neden koyulaştırılmadı:** hiçbir değer "kartın üstünde görünür" (≥3:1) ile
-"dolgu ↔ iz" (≥3:1) kısıtlarını **birlikte** tutturamıyor (tarandı, 0 aday — `track.mjs`).
-Mevcut değer ödünleşimin doğru tarafında: bilgiyi taşıyan **dolgu sınırı** geçiyor, pasif
-bölge bilginin yokluğu.
+> ⚠️ İlk denemede "hiçbir `--track` değeri iki kısıtı birlikte tutturmuyor, 0 aday"
+> denmişti. **O arama eksikti:** yalnızca kütüğün rengi değişken sayılmıştı. Açık mod
+> yeni, orada korunacak referans yok — **dolgu rengi ve kenarlık da değişkendi.**
+> Üçü birden arandı (`bars.mjs`) ve çözüm çıktı.
 
-> **Not (renkle ilgisi yok, açık mod işi değil):** grafik 2'de çubuk yüksekliği `v*5.5px`,
-> "kayıt yok" kütüğü ise sabit `8px`. Yani **v=1 olan bir gün, hiç kayıt olmayan günden
-> daha KISA** görünüyor. Her iki modda da böyle. Ayrı ele alınmalı.
+**(a) Dolgu — `anxBarColor(v, theme)`.** Rapor çubuğu açık modda ısı haritasından **ayrı**
+bir rampa kullanır (taban 0.70). İki sebep: çubuk **kartın** (`#ffffff`) üstünde, ısı
+haritası **sayfa zemininin** (`#f2f2f6`) üstünde; ve çubukta **yükseklik zaten değeri
+kodluyor**, yani renkteki rampa orada fazladan bilgi — ısı haritasında yükseklik yok.
+Isı haritasının tabanı yükseltilemezdi: orada bant sınırı düşüyor (§4).
+
+**(b) Kenarlık — `--track-line`.** "Kayıt yok" kütüğüne `1px border`, `ProgressBar`'a
+`outline`. 1.4.11'in standart çözümü: dolgu farkı taşıyamıyorsa **sınır** taşır.
+
+> **Koyu modda `--track-line: transparent`.** Saydam kenarlık arkasındaki background'ı
+> gösterdiği için (`background-clip` varsayılanı `border-box`) kütük **birebir aynı**
+> render ediliyor → koyu mod piksel farkı 0.
+>
+> **`ProgressBar`'da `border` DEĞİL `outline`:** `border`, `height:100%` olan dolgu
+> çocuğunu 2px kısaltır ve koyu modu değiştirirdi. `outline` yerleşimi hiç etkilemez.
+
+> **Faz 3 SONRASI, ayrı `fix:` commit'i — renkle ilgisi yok:** grafik 2'de çubuk yüksekliği
+> `v*5.5px`, "kayıt yok" kütüğü ise sabit `8px`. Yani **v=1 olan bir gün, hiç kayıt olmayan
+> günden daha KISA** görünüyor. Her iki modda da böyle. Düzeltmek **koyu modun render'ını
+> da değiştirecek**, bu yüzden rapor ekranının piksel referansı yeniden alınmalı — Faz 3
+> tamamen bittikten sonra yapılacak.
 
 ---
 
@@ -499,7 +519,7 @@ npx playwright install webkit
 Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
 `states.mjs` (etkileşimli durumlar), `animtest.mjs` (tema geçişi / `theme-anim`),
 `g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı), `heatmap.mjs` (ısı haritası rampası),
-`ramp.mjs`/`ramp3.mjs`/`ramp4.mjs` (rampa çözücüleri), `g5cap.mjs` + `g5contrast.mjs`
+`ramp.mjs`/`ramp3.mjs`/`ramp4.mjs` (rampa çözücüleri), `bars.mjs` (rapor çubuğu arama), `g5cap.mjs` + `g5contrast.mjs`
 (rapor), `track.mjs` (--track ödünleşimi), `contrast.mjs` (WCAG hesabı), `final.mjs`
 (56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
 `blocks.mjs` (koyu/açık token karşılaştırması).
@@ -669,11 +689,29 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | `--r-xl`, `--pink` gibi kullanılmayan token'lar | `--r-xl` önceden de kullanılmıyordu; zararsız |
 | Lint uyarısı `'Icon' is defined but never used` | Önceden mevcut, `main`'de de var |
 | **`.pressable` + `.themed` çakışması** | ✅ **çözüldü** — geçici `html.theme-anim` sınıfı (§8 Q). Ölçüm aşağıda |
-| **W — lejant ↔ ısı haritası görsel dili** | ⬜ **karar kullanıcıda** — aşağıda |
-| Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden kısa | ⬜ renk işi değil, ayrı ele alınacak (§4) |
+| **W — lejant ↔ ısı haritası görsel dili** | ✅ **çözüldü** — A seçeneği, `anxLegend()` (§4) |
+| **Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden KISA** | ⬜ **Faz 3 bittikten SONRA, ayrı `fix:` commit'i.** Gerçek bug ama renkle ilgisi yok; düzeltmek koyu modun render'ını da değiştireceği için rapor ekranının piksel referansı yeniden alınmalı. Detay §4 |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
 
-### W — lejant, ısı haritası ve seçili buton aynı dili konuşuyor mu?
+### W — lejant, ısı haritası ve seçili buton aynı dili konuşuyor mu? ✅
+
+**Karar: A uygulandı** (`97bcef8`) — açık modda lejant karesi `--anx-*` yerine bandın
+**tam yoğunluk harita rengini** kullanıyor (`anxLegend()`). Sonuç, lejant ↔ bandın en
+koyu karesi:
+
+| Bant | önce (açık) | **sonra (açık)** | koyu (referans) |
+|---|---|---|---|
+| low | 2.09:1 | **1.00:1** | 1.22:1 |
+| mid | 1.96:1 | **1.00:1** | 1.40:1 |
+| high | 1.53:1 | **1.04:1** | 1.27:1 |
+
+Koyu moddaki ilişkiden **daha da yakın** (koyu modda `--anx-*` bandın en koyu karesiyle
+tam eşit değil, açık modda artık birebir). Metin taşıyan yüzeyler — seçili buton ve durum
+etiketi — `--anx-*`'ta **kaldı**; onların kısıtı AA metin kontrastı.
+
+Aşağıdaki analiz kararın gerekçesi olarak duruyor.
+
+### W — analiz (karar öncesi)
 
 Kaygı sekmesinde **üç** yüzey bant rengini gösteriyor: lejant kareleri, ısı haritası
 kareleri, seçili skala butonu + durum etiketi. Hangi token'ı kullandıkları:
