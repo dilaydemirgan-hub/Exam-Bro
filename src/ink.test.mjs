@@ -1,6 +1,5 @@
 // node src/ink.test.mjs
 // ink() sözleşmesinin testi — docs/LIGHT-MODE.md §6
-import assert from "node:assert/strict";
 import fs from "node:fs";
 import { ink, INK_BASE, INK_PAGE, INK_WASH } from "./ink.js";
 
