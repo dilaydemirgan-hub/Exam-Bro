@@ -19,15 +19,15 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 2'si bitti** |
+| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 3'ü bitti** |
 | 4 | Rapor sekmesine "Görünüm" seçici | ⬜ başlamadı |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
 | 7 | Doğrulama | ⬜ başlamadı |
 
-Commit geçmişi (yeniden eskiye): `b6ad7b0` docs · `1529c3d` faz3-2 · `ce774a5` faz3-1 ·
-`4536ddb` docs · `42f84dc` faz2 · `7687f47` fix · `567de95` faz1 · `dc65b68` status-bar ·
-`7379d41` (main'in ucu, dokunulmadı).
+Commit geçmişi (yeniden eskiye): `acdd868` faz3-3 · `edd7ec8` chore · `da1470f` docs ·
+`b6ad7b0` docs · `1529c3d` faz3-2 · `ce774a5` faz3-1 · `4536ddb` docs · `42f84dc` faz2 ·
+`7687f47` fix · `567de95` faz1 · `dc65b68` status-bar · `7379d41` (main'in ucu, dokunulmadı).
 
 ---
 
@@ -206,18 +206,19 @@ yuvarlamak eşiğin bir tık altına düşürüyor: `#ff9736` normal kovada **4.
 
 | Yer | Satır | Boyut | Neden |
 |---|---|---|---|
-| `CountCard` "Sınav günü! Başarılar 🍀" | ~866 | 18px/700 | **18 < 18.66 → large DEĞİL** |
-| `ExamsTab` ÖSYM sınav adı | 1267 | 15px/600 | ⬜ yapılacak |
-| `ExamsTab` ÖSYM "{n}g kaldı" | 1272 | 12px | ⬜ yapılacak |
-| `ExamsTab` FIXED liste sınav adı | 1330 | 16px/600 | ⬜ yapılacak |
-| `ExamsTab` FIXED "bugün! 🍀" | 1334 | 13px/700 | ⬜ yapılacak |
-| `ExamsTab` FIXED "{n}g" | 1335 | 14px | ⬜ yapılacak |
-| `ExamsTab` customs sınav adı | 1351 | 15px/600 | ⬜ yapılacak (`ex.c \|\| var(--text-1)`) |
-| `ExamsTab` customs "{n}g" / "✓" | 1356 | 14px | ⬜ yapılacak (`ex.c \|\| var(--gold)`) |
+| `CountCard` "Sınav günü! Başarılar 🍀" | ~866 | 18px/700 | **18 < 18.66 → large DEĞİL** | ✅ |
+| `ExamsTab` ÖSYM sınav adı | ~1272 | 15px/600 | ✅ |
+| `ExamsTab` ÖSYM "{n}g kaldı" | ~1278 | 12px | ✅ |
+| `ExamsTab` FIXED liste sınav adı | ~1340 | 16px/600 | ✅ |
+| `ExamsTab` FIXED "bugün! 🍀" | ~1344 | 13px/700 | ✅ |
+| `ExamsTab` FIXED "{n}g" | ~1345 | 14px | ✅ |
+| `ExamsTab` customs sınav adı | ~1362 | 15px/600 | ✅ (`c \|\| var(--text-1)`) |
+| `ExamsTab` customs "{n}g" / "✓" | ~1367 | 14px | ✅ (`c \|\| var(--gold)`) |
 
 > `ExamsTab`'de toplam **7** ink() noktası var. (Önceki bir özette 8 denmişti, bir satır
-> çift sayılmıştı.) Son ikisinde değer `var(…)` olabiliyor — `ink()` hex olmayanı aynen
-> döndürdüğü için güvenli.
+> çift sayılmıştı.) Üç `map` bloğunun her birinde bir kez `const c = ink(ex.c, theme)`
+> hesaplanıp paylaşılıyor. Son ikisinde `ex.c` hiç olmayabilir — `ink()` hex olmayanı
+> (ve `undefined`'ı) aynen döndürdüğü için `c || var(…)` yedeği bozulmadan çalışıyor.
 
 **Kova 2 — `ink(c, theme, "large")` · büyük metin + anlamlı grafik · 3:1**
 
@@ -267,13 +268,27 @@ yuvarlamak eşiğin bir tık altına düşürüyor: `#ff9736` normal kovada **4.
 **2 ✅ ana sayfa + geri sayım — `1529c3d`**
 `HomeTab` (755–831), `CountCard` (832–894). `ink()` devrede, `src/ink.js` + `npm test`.
 
+**3 ✅ sınavlar — `acdd868`**
+`ExamsTab` (1239–1389), üç görünüm de: liste / ÖSYM / manuel. Yukarıdaki **7 ink()
+noktası** bağlandı. Manuel ekleme ekranındaki 3 input'a `.themed`.
+`<input type="date">` / `type="time"` picker'ı açık modda **doğrulandı** — görünümü
+`:root`'taki `color-scheme`'den kalıtıyor, inline `colorScheme` yok (§4).
+Ayrıca doğrulanan durumlar: gizli/görünür FIXED kartı, ÖSYM "Eklendi" rozeti,
+seçili ders çipi, etkin/devre dışı "Sınav Ekle" butonu.
+
+> **`.themed` neden yalnızca input'lara eklendi:** `ExamsTab`'deki diğer yüzeyler ya
+> `Card` (zaten `.themed`), ya da `.pressable` butonlar. `.pressable` üzerinde `.themed`
+> **etkisiz** — aşağıdaki §13 maddesine bak. FIXED liste kartları ise kendi inline
+> `transition:"all 0.2s"`'i ile zaten geçiş yapıyor; oraya `.themed` eklemek ölü kod olurdu.
+
 ### Kalan gruplar (her biri ayrı commit + koyu/açık ekran görüntüsü)
+
+Not: aşağıdaki satır numaraları grup 3'ten sonra ~10 satır kaymıştır.
 
 | # | Grup | Kapsam (`src/App.jsx`) | Yapılacaklar |
 |---|---|---|---|
-| 3 | **Sınavlar** | `ExamsTab` 1239–1379 | Yukarıdaki **7 ink() noktası**; liste/ÖSYM/manuel üç görünüm; `<input type="date">` ve `type="time"` picker'ını açık modda kontrol et (`color-scheme` üzerinden gelmeli); kart konteynerlerine `.themed` |
-| 4 | **Hedefler + Kaygı** | `GoalsTab` 1380–1451, `AnxietyTab` 1452–1522 | Kaygı ısı haritasının açık modda okunurluğu (§4), 1–10 skalası seçili/seçilmemiş halleri, hedef checkbox'ı, öneri çipleri, boş durumlar |
-| 5 | **Rapor** | `ReportTab` 1523–1614, `Stat` 1647, `SettingsRow` 1615, `ToggleSwitch` 1630 | İki çubuk grafik (`--track`, `--grad-green-bar`), istatistik kutuları, ayarlar kartı, toggle |
+| 4 | **Hedefler + Kaygı** | `GoalsTab` ~1390–1461, `AnxietyTab` ~1462–1532 | Kaygı ısı haritasının açık modda okunurluğu (§4), 1–10 skalası seçili/seçilmemiş halleri, hedef checkbox'ı, öneri çipleri, boş durumlar |
+| 5 | **Rapor** | `ReportTab` ~1533–1624, `Stat` ~1657, `SettingsRow` ~1625, `ToggleSwitch` ~1640 | İki çubuk grafik (`--track`, `--grad-green-bar`), istatistik kutuları, ayarlar kartı, toggle |
 | 6 | **Psikoloji hub + nefes + program** | `PsychologyHub` 895–977, `HubBar` 978, `LessonReader` 993–1027, `BreathingPlayer` 1028–1107, `BreathCircle` 1108–1132, `ProgramView` 1133–1185 | Chevron ikonuna `ink(…, "large")`; `--grad-breath` / `--grad-closing` açık karşılıkları zaten tanımlı, uygulamada doğrula; **BreathCircle transition'dan MUAF** |
 | 7 | **Paywall + overlay'ler** | `Paywall` 1186–1238, `ui.jsx` toast + `ConfirmSheet` | `--overlay-sheet` / `--overlay-modal` (%35), `--surface-modal`, `--handle`, `--shadow-toast` |
 
@@ -313,7 +328,11 @@ yuvarlamak eşiğin bir tık altına düşürüyor: `#ff9736` normal kovada **4.
 blokta `transition-duration: 0.01ms !important` ile zaten kapatıyor.
 
 **Sınıfı ALAN öğeler:** `S.root`, `S.header`, `S.nav`, `Card` (`ui.jsx`), `CountCard` kökü,
-ana sayfadaki motivasyon kartı, "Bugün Çalıştım" butonu, psikoloji köşesi kartı, Pro teaser.
+ana sayfadaki motivasyon kartı, "Bugün Çalıştım" butonu, psikoloji köşesi kartı, Pro teaser,
+`ExamsTab` manuel ekleme ekranındaki 3 input.
+
+> ⚠️ Bunlardan `.pressable` de taşıyanlarda (`"Bugün Çalıştım"`, psikoloji köşesi, Pro
+> teaser) `.themed` **şu an etkisiz** — sebebi ve kararı §13'te.
 
 **Sınıftan MUAF (bilerek — kendi transform/width animasyonları var, tema geçişi eklenirse
 mod değişiminde sürüklenme görünüyor):**
@@ -358,10 +377,17 @@ npx playwright install webkit
 ```
 
 Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
-`contrast.mjs` (WCAG hesabı), `final.mjs` (56 çiftlik kontrast tablosu),
-`mixtest.mjs` (color-mix paritesi), `blocks.mjs` (koyu/açık token karşılaştırması).
-**Oturum değişirse bunlar da kaybolur** — `cap.mjs`/`diff.mjs` yeniden yazılabilir,
-mantıkları aşağıda.
+`states.mjs` (etkileşimli durumlar), `contrast.mjs` (WCAG hesabı), `final.mjs`
+(56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
+`blocks.mjs` (koyu/açık token karşılaştırması).
+**Oturum değişirse bunlar da kaybolur** — grup 3'te `cap.mjs`/`diff.mjs`/`states.mjs`
+sıfırdan yeniden yazıldı, mantıkları aşağıda. (WebKit binary'si
+`~/Library/Caches/ms-playwright` altında kalıyor, yeniden indirilmedi.)
+
+`cap.mjs`, onboarding'i atlamak için `addInitScript` ile tohum veri yazıyor:
+`xb_grade="12"` → `hidden` varsayılanı `["LGS"]`, yani FIXED listede hem **görünür**
+(TYT/AYT) hem **gizli** (LGS) kart aynı ekranda; ayrıca bir kullanıcı sınavı
+(`xb_customs`). Böylece `ExamsTab`'in üç bölümü de tek görüntüde yakalanıyor.
 
 Akış:
 
@@ -381,6 +407,10 @@ cd ~/Exam-Bro && git stash pop -q && npm run build
 # 3) Karşılaştır — sonuç 0 piksel olmalı
 node diff.mjs '[["base-home.png","new-home.png","home"], …]'
 ```
+
+Grup 3'te çekilen 7 ekran (hepsi **0 piksel**): `home` · `exams` · `osym` · `manual` ·
+`goals` · `anx` · `report`. Sınavlar sekmesinin alt görünümleri `btn:` adımıyla açılıyor:
+`node cap.mjs dark new-osym.png tab:Sınavlar "btn:ÖSYM Takvimi" full`
 
 `cap.mjs` kullanımı: `node cap.mjs <dark|light> <çıktı.png> [adım…]`
 adımlar: `tab:Rapor` · `btn:Metin` · `radio:8` · `wait:500` · `full` (tam sayfa).
@@ -488,3 +518,33 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | `manifest.json` `#080810` | ⬜ dokunulmadı, Faz 3 sonunda konuşulacak |
 | `--r-xl`, `--pink` gibi kullanılmayan token'lar | `--r-xl` önceden de kullanılmıyordu; zararsız |
 | Lint uyarısı `'Icon' is defined but never used` | Önceden mevcut, `main`'de de var |
+| **`.pressable` + `.themed` çakışması** | ⬜ **karar kullanıcıda** — aşağıya bak |
+| FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
+
+### `.pressable` + `.themed` — tema geçişi düşüyor
+
+`index.css`'te iki sınıf da `transition` kısayolunu yazıyor ve **ikisi de (0,1,0)
+specificity**. `.themed` 338. satırda, `.pressable` 360. satırda → kaynak sırası gereği
+`.pressable` kazanıyor ve `.themed`'in geçişini tamamen eziyor. WebKit'te ölçüldü:
+
+```
+S.root (.themed)                     → background-color 0.18s, color 0.18s
+"Bugün Çalıştım" (.pressable .themed)→ transform 0.15s, opacity 0.15s   ← tema geçişi YOK
+```
+
+Etkilenenler grup 1–2'den geliyor: "Bugün Çalıştım", psikoloji köşesi kartı, Pro teaser.
+**Statik görünüm etkilenmiyor** (piksel farkı 0), yalnızca mod değiştirirken bu üç buton
+animasyon yerine anında sıçrıyor.
+
+**Grup 3'te bilerek düzeltilmedi.** Tek satırlık düzeltmesi var:
+
+```css
+.pressable.themed { transition: transform .15s ease, opacity .15s ease,
+                                background-color 180ms ease, color 180ms ease; }
+```
+
+Ama bu, arka planı **duruma göre değişen** butonlarda (`"Bugün Çalıştım"` →
+`doneToday` olunca `--grad-green` → `--green-soft`) koyu modda da 180ms'lik bir renk
+geçişi başlatır. Yani **koyu modun davranışı değişir** — §2'deki kırmızı çizgi.
+Bu yüzden ölü `.themed` eklemek yerine durum kullanıcıya bırakıldı; Faz 3 sonunda
+"geçiş senaryoları" maddesiyle birlikte karara bağlanacak.
