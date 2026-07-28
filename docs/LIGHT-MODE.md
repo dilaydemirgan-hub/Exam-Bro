@@ -19,13 +19,14 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 3'ü bitti** |
+| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 4'ü bitti** |
 | 4 | Rapor sekmesine "Görünüm" seçici | ⬜ başlamadı |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
 | 7 | Doğrulama | ⬜ başlamadı |
 
-Commit geçmişi (yeniden eskiye): `acdd868` faz3-3 · `edd7ec8` chore · `da1470f` docs ·
+Commit geçmişi (yeniden eskiye): `2a671ad` faz3-4 · `ca15afb` fix(tema) ·
+`0ec94bd` docs · `acdd868` faz3-3 · `edd7ec8` chore · `da1470f` docs ·
 `b6ad7b0` docs · `1529c3d` faz3-2 · `ce774a5` faz3-1 · `4536ddb` docs · `42f84dc` faz2 ·
 `7687f47` fix · `567de95` faz1 · `dc65b68` status-bar · `7379d41` (main'in ucu, dokunulmadı).
 
@@ -119,6 +120,32 @@ krem `#fdf1e5`. Sebep: zemini accent'e yaklaştırdıkça üstündeki accent met
 **Kaygı ısı haritası.** Alfa rampası (0.48–0.90) koyu modda dokunulmaz olduğu için açık
 moda uyum ancak `--anx-*-rgb` kanallarını koyultarak sağlandı. En zayıf kare (v=1,
 alfa 0.50) açık modda `#80baab` civarı — kaybolmuyor.
+
+**Kaygı skalasının METİN taşıyan yüzeyleri — `anxFill()` / `anxPillStyle()`.**
+Isı haritasında işe yarayan alfa rampası, üstünde **metin** olan iki yerde açık modda
+çöküyordu (grup 4'te gerçek render edilmiş piksellerden ölçüldü):
+
+| Yer | Açık mod (önce) | Koyu mod |
+|---|---|---|
+| Seçili skala butonu | `#ffffff` / `#e593b0` = **2.30:1** ✗ | `#ffffff` / `#842f57` = 8.32:1 ✓ |
+| Durum etiketi ("yoğun") | `#c81e5a` / `#eaa9c0` = **2.89:1** ✗ | `#ff4d94` / `#431f37` = 4.52:1 ✓ |
+
+**Yıkamayı zayıflatmak çözüm değil** — `--anx-low` (`#0d805b`) için *hiçbir* yüzde 4.5'i
+geçmiyor (%12'de 4.57 ama low bandı %8'de bile kalıyor). Seri rozetiyle (`--orange-soft`)
+birebir aynı olgu: zemini accent'e yaklaştırdıkça accent metnin kontrastı düşüyor.
+
+Çözüm: **açık modda bant rengi tam opak zemin**, üstüne `--on-accent`.
+
+| Bant | Açık zemin | Beyaz metinle |
+|---|---|---|
+| low | `#0d805b` | 4.93:1 |
+| mid | `#9c5f08` | 5.18:1 |
+| high | `#c81e5a` | 5.54:1 |
+
+**Isı haritası, lejant ve rapor grafiği DOKUNULMADI** — `anxColor()` değişmedi, alfa
+rampası oralarda zaten okunuyor. Karar tek yerde: `anxFill(v, theme)` (seçili buton) ve
+`anxPillStyle(v, theme)` (durum etiketi), ikisi de `src/App.jsx`'te `anxSolid`'in hemen
+altında. Koyu mod her ikisinde de eski `anxColor()`/`tint()` yolunu kullanmaya devam ediyor.
 
 ---
 
@@ -281,14 +308,20 @@ seçili ders çipi, etkin/devre dışı "Sınav Ekle" butonu.
 > `html.theme-anim .pressable` kuralı kapsıyor (§8 Q), ayrıca `.themed` gerekmiyor.
 > FIXED liste kartları ise kendi inline `transition:"all 0.2s"`'i ile zaten geçiş yapıyor.
 
+**4 ✅ hedefler + kaygı — `2a671ad`**
+`GoalsTab` / `AnxietyTab`. Kaygı skalasının seçili butonu ve durum etiketi açık modda
+AA'nın altındaydı → `anxFill()` / `anxPillStyle()` (§4). `GoalsTab`'de **renk değişikliği
+gerekmedi** — checkbox, öneri çipleri, ilerleme kartı, input ve boş durum açık modda zaten
+AA. `.themed`: hedef satırları, hedef input'u, "günün notu" kartı.
+Isı haritası, lejant ve rapor grafiği dokunulmadı.
+
 ### Kalan gruplar (her biri ayrı commit + koyu/açık ekran görüntüsü)
 
-Not: aşağıdaki satır numaraları grup 3'ten sonra ~10 satır kaymıştır.
+Not: aşağıdaki satır numaraları grup 3–4'ten sonra ~30 satır kaymıştır.
 
 | # | Grup | Kapsam (`src/App.jsx`) | Yapılacaklar |
 |---|---|---|---|
-| 4 | **Hedefler + Kaygı** | `GoalsTab` ~1390–1461, `AnxietyTab` ~1462–1532 | Kaygı ısı haritasının açık modda okunurluğu (§4), 1–10 skalası seçili/seçilmemiş halleri, hedef checkbox'ı, öneri çipleri, boş durumlar |
-| 5 | **Rapor** | `ReportTab` ~1533–1624, `Stat` ~1657, `SettingsRow` ~1625, `ToggleSwitch` ~1640 | İki çubuk grafik (`--track`, `--grad-green-bar`), istatistik kutuları, ayarlar kartı, toggle |
+| 5 | **Rapor** | `ReportTab` ~1560–1650, `Stat` ~1685, `SettingsRow` ~1650, `ToggleSwitch` ~1665 | İki çubuk grafik (`--track`, `--grad-green-bar`), istatistik kutuları, ayarlar kartı, toggle. **Not:** çubuklar `.no-theme-anim` aldı (§8), ikinci grafik `anxColor()` kullanıyor — o dokunulmadı |
 | 6 | **Psikoloji hub + nefes + program** | `PsychologyHub` 895–977, `HubBar` 978, `LessonReader` 993–1027, `BreathingPlayer` 1028–1107, `BreathCircle` 1108–1132, `ProgramView` 1133–1185 | Chevron ikonuna `ink(…, "large")`; `--grad-breath` / `--grad-closing` açık karşılıkları zaten tanımlı, uygulamada doğrula; **BreathCircle transition'dan MUAF** |
 | 7 | **Paywall + overlay'ler** | `Paywall` 1186–1238, `ui.jsx` toast + `ConfirmSheet` | `--overlay-sheet` / `--overlay-modal` (%35), `--surface-modal`, `--handle`, `--shadow-toast` |
 
@@ -356,7 +389,8 @@ açılışta renk animasyonu istemiyoruz, `data-theme`'i FOUC script'i zaten yaz
 
 **`.themed` ALAN öğeler:** `S.root`, `S.header`, `S.nav`, `Card` (`ui.jsx`), `CountCard` kökü,
 ana sayfadaki motivasyon kartı, "Bugün Çalıştım" butonu, psikoloji köşesi kartı, Pro teaser,
-`ExamsTab` manuel ekleme ekranındaki 3 input.
+`ExamsTab` manuel ekleme ekranındaki 3 input, `GoalsTab` hedef satırları + hedef input'u,
+`AnxietyTab` "günün notu" kartı.
 
 #### MUAF öğeler — `.no-theme-anim`
 Kendi `transform`/`width`/`height` animasyonları var; geçici kural da bunlara **dokunamaz**,
@@ -409,6 +443,7 @@ npx playwright install webkit
 
 Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
 `states.mjs` (etkileşimli durumlar), `animtest.mjs` (tema geçişi / `theme-anim`),
+`g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı ekranları ve kontrast ölçümü),
 `contrast.mjs` (WCAG hesabı), `final.mjs`
 (56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
 `blocks.mjs` (koyu/açık token karşılaştırması).
@@ -458,6 +493,24 @@ await pg.clock.setFixedTime(new Date("2026-07-28T09:00:00Z"));
 Yoksa **geri sayımın saniyeleri sahte fark üretiyor**. İlk denemede ana sayfada 1488
 piksel (%0.08) fark çıktı ve gerçek bir regresyon sanıldı; diff görüntüsüne bakınca
 farkın yalnızca DK/SN hanelerinde olduğu görüldü. Saat dondurulunca 0'a indi.
+
+### Kontrastı GERÇEK PİKSELDEN ölç (`g4contrast.mjs`)
+
+Yarı saydam zeminlerde (`anxColor()` gibi `rgba` yıkamalar) kontrastı elle hesaplamak
+hataya açık: kartın kendi zemini, üstündeki tint, `--bg` ve alfa üst üste biniyor.
+`g4contrast.mjs` bunun yerine öğenin **ekran görüntüsündeki zemin pikselini** okuyup
+`getComputedStyle().color` ile karşılaştırıyor — ne render edildiyse o ölçülüyor:
+
+```js
+const color = parse(await el.evaluate(e => getComputedStyle(e).color));
+const box   = await el.boundingBox();
+const shot  = PNG.sync.read(await pg.screenshot());
+const i = (shot.width * Math.round(box.y + box.height/2) + Math.round(box.x + 3)) << 2;
+const bg = [shot.data[i], shot.data[i+1], shot.data[i+2]];   // metnin uzağında, kutu içi
+```
+
+Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ölçüm
+2.30:1 dedi. Yeni bir yarı saydam yüzey eklenince aynı yöntemi kullan.
 
 ### Sürekli doğrulanacaklar
 - `npm run build` temiz.
