@@ -349,11 +349,25 @@ yuvarlamak eşiğin bir tık altına düşürüyor: `#ff9736` normal kovada **4.
 | `#10d99e` | LGS, KPSS×4, nefes kat. | `#10775e` | `#109773` |
 | `#9d5cff` | TYT, kaygı kat. | `#7848c4` | `#9c5bfd` |
 | `#ff4d94` | AYT, sınav günü kat. | `#ae386b` | `#e04584` |
-| `#ff9736` | ALES×3 | `#955b2a` | `#be732f` |
-| `#5c9bff` | DGS, mükemmeliyetçilik | `#3f66a9` | `#4f83d7` |
+| `#ff9736` | ALES×3 | `#935a2a` | `#be732f` |
+| `#5c9bff` | DGS, mükemmeliyetçilik | `#3f66a9` | `#4f83d8` |
 | `#b07aff` | MEB-AGS | `#7754ae` | `#996bde` |
-| `#ffbe0b` | kullanıcı sınavları | `#856514` | `#aa8011` |
-| `#ffb703` | erteleme kat. | `#886410` | `#ae7e0c` |
+| `#ffbe0b` | kullanıcı sınavları | `#856514` | `#ab8111` |
+| `#ffb703` | erteleme kat. | `#89640f` | `#ae7e0c` |
+
+> ⚠️ **Bu tablonun 4 hücresi bir kez yanlış yazılmıştı (düzeltildi).** Tablo elle
+> yazılmış, `ink()`'in çıktısından üretilmemişti; `#ff9736` normal · `#5c9bff` large ·
+> `#ffbe0b` large · `#ffb703` normal hücreleri koddan farklıydı. Üçü zararsızdı (farklı
+> ama yine eşiği geçen ton), ama **`#ff9736` normal için yazılan `#955b2a` en koyu
+> zeminde 4.491:1** — yani dokümanda **eşiğin altında bir değer GEÇER gibi duruyordu**.
+> Kod her zaman doğruydu (`#935a2a`, 4.577:1); `src/ink.js` tek commit'lik (`1529c3d`) ve
+> hiç değişmedi. Yanlış hücreler §6'daki yuvarlama düzeltmesinden **önceki** ara
+> değerlerdi (bkz. yukarıdaki "4.48:1" notu — aynı renk).
+>
+> **`npm test` bunu yakalayamaz** ve yakalaması da beklenmemeli: eşikleri `ink()`'in
+> *kendi* çıktısına karşı doğruluyor, bu tabloya karşı değil. Tablo "referans"tır —
+> bir değeri kullanmadan önce koddan üretin:
+> `node -e 'import("./src/ink.js").then(({ink})=>console.log(ink("#ff9736","light")))'`
 
 ---
 
@@ -601,6 +615,10 @@ Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ö
 - `npm run build` temiz.
 - `npm run lint` → **1 uyarı** (`'Icon' is defined but never used`, `App.jsx`) —
   **önceden mevcut**, `main`'de de var, regresyon değil.
+  > `542d907` (düzeneği repoya alan commit) bunu bir süre **19 hata**ya çıkarmıştı:
+  > `tools/theme-check/*.mjs` eslint'te tarayıcı global'leriyle taranıyordu, her
+  > `process` kullanımı `no-undef` veriyordu. `eslint.config.js`'teki node bloğuna
+  > `tools/**/*.mjs` eklendi. **Düzeneğe yeni betik eklerken lint'i de koşun.**
 - Ham renk taraması:
   `grep -rnE "#[0-9a-fA-F]{3,8}\b|rgba?\(" src/ --include="*.jsx" --include="*.js" --include="*.css"`
   → yalnızca **veri renkleri** (`FIXED`/`OSYM`/`c:"#ffbe0b"`/`PSYCH_COLORS`) ve
