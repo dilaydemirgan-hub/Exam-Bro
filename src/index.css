@@ -129,7 +129,10 @@
   --grad-breath-halo: radial-gradient(circle, rgba(16,217,158,0.16), transparent 70%);
   --grad-closing:   linear-gradient(135deg,#0b3a2a,#0e2a40);
 
-  /* ── Gölge & parıltı ── */
+  /* ── Gölge & parıltı ──
+     Koyu modda gölge neredeyse görünmez; ayrım kenarlıkla yapılır.
+     Bu yüzden --shadow-card koyu modda YOK, açık modda taşıyıcı öğe. */
+  --shadow-card:  none;
   --shadow-toast: 0 8px 30px rgba(0,0,0,0.55);
   --shadow-knob:  0 1px 4px rgba(0,0,0,0.4);
   --glow-green:   0 8px 28px rgba(16,217,158,0.35);
@@ -151,6 +154,156 @@
   /* Native form kontrolleri (date/time picker), scrollbar ve varsayılan
      kontrol renkleri buna bağlı — tema ile birlikte değişmek ZORUNDA. */
   color-scheme: dark;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AÇIK MOD
+   ──────────────────────────────────────────────────────────────
+   ⚠️ SPECIFICITY — BU BLOĞU TAŞIMA / SEÇİCİYİ SADELEŞTİRME.
+   Koyu blok iki seçiciye açılıyor: ':root' (0,1,0) ve
+   ':root[data-theme="dark"]' (0,2,0). Bu blok da ':root[...]'
+   (0,2,0) olarak yazıldı ve koyu bloğun ALTINDA duruyor.
+   Sadece '[data-theme="light"]' yazılsaydı specificity (0,1,0)
+   olur, bare ':root' ile eşitlenir ve yalnızca kaynak sırası
+   sayesinde çalışırdı — kırılgan. Eşit specificity + sonra gelmek
+   yerine, YÜKSEK specificity + sonra gelmek istiyoruz.
+
+   Tasarım kuralları (koyu modun tersi):
+   • Saf beyaz zemin yok: sayfa kırık beyaz, kartlar beyaz —
+     yani kartlar zeminden bir ton AÇIK.
+   • Kenarlıklar daha belirgin, gölgeler gerçek.
+   • Accent'ler bir tık koyu: marka kimliği aynı, ton koyulaşıyor.
+   • Tüm metin/zemin çiftleri WCAG AA (normal 4.5:1, büyük 3:1).
+   ══════════════════════════════════════════════════════════════ */
+:root[data-theme="light"] {
+  /* ── Surfaces ── */
+  --bg:          #f2f2f6;   /* kırık beyaz sayfa — saf beyaz göz yorar */
+  --surface-1:   #f8f8fb;   /* hafif panel */
+  --surface-2:   #ffffff;   /* ana kart — zeminden AÇIK */
+  --surface-3:   #ffffff;   /* yükseltilmiş kart / kontrol */
+  --surface-input: #e8e8ef;
+  --surface-sheet: #ffffff;
+  --surface-modal: #ffffff;
+  --surface-toast: #ffffff;
+  --border:      #d5d5e0;   /* açık modda belirgin olmalı */
+  --border-soft: #e4e4ec;
+  --border-strong: #a8a8bd;
+  --border-grid: #e0e0e9;
+  --track:       #e2e2ea;
+  --handle:      #d0d0dc;
+  --switch-off:  #c3c3d2;
+  --switch-knob: #fff;
+
+  /* ── Sabit / yarı saydam katmanlar ── */
+  --header-bg:     rgba(242,242,246,0.92);
+  --nav-bg:        rgba(255,255,255,0.94);
+  --overlay-sheet: rgba(0,0,0,0.35);   /* açık modda daha düşük opaklık */
+  --overlay-modal: rgba(0,0,0,0.35);
+  --overlay-boom:  rgba(246,246,249,0.86);
+
+  /* ── Text ── */
+  --text-0: #0d0d14;
+  --text-1: #17171f;
+  --text-2: #3f3f52;
+  --text-3: #55556b;
+  --text-4: #6b6b82;
+  --on-accent: #fff;
+  --on-green:  #fff;   /* açık modda yeşil KOYU → üstüne beyaz yazı */
+  --on-gold:   #fff;   /* açık modda sarı KOYU → üstüne beyaz yazı */
+
+  /* ── Brand & semantic accents (koyulaştırılmış varyantlar) ── */
+  --violet: #7c3aed;
+  --pink:   #db2777;
+  --gold:   #9c5f08;
+  --green:  #0d805b;
+  --blue:   #2563eb;
+  --orange: #a8560e;
+  --amber:  #976801;
+  --danger:       #d01f45;
+  --danger-muted: #a83a58;
+
+  /* ── Accent türevleri ── */
+  --green-soft: rgba(13,128,91,0.10);
+  --green-line: rgba(13,128,91,0.35);
+  --green-edge: rgba(13,128,91,0.45);
+  --green-deep:   #047857;
+  --green-deep-2: #0b7a5c;
+
+  --violet-soft:   rgba(124,58,237,0.10);
+  --violet-line:   rgba(124,58,237,0.30);
+  --violet-line-2: rgba(124,58,237,0.35);
+  --violet-line-3: rgba(124,58,237,0.40);
+  --violet-light:  #6d28d9;
+  --violet-text:   #5b21b6;
+  --violet-text-2: #5b21b6;
+  --violet-text-3: #4c1d95;
+
+  /* Seri rozeti: türetilmiş tint burada ters teper — zemini accent'e
+     yaklaştırdıkça üstündeki accent metnin kontrastı DÜŞÜYOR (%4'te bile
+     4.47:1). Bu yüzden açık modda sabit sıcak krem. */
+  --orange-soft:   #fdf1e5;
+  --orange-line:   rgba(168,86,14,0.40);
+  --orange-edge:   rgba(168,86,14,0.45);
+  --orange-edge-2: rgba(168,86,14,0.38);
+  --orange-edge-3: rgba(168,86,14,0.32);
+  --orange-text:   #7c5219;
+  --streak-pill-bg: #fdf1e5;
+
+  --gold-line: rgba(156,95,8,0.45);
+  --badge-blue-bg: #e4edfd;
+
+  --breath-text:   #0b4a37;
+  --breath-text-2: #2a6a58;
+  --success-text:  #12503a;
+  --today-ring:    rgba(0,0,0,0.45);
+
+  /* ── Kaygı skalası ──
+     Kanallar koyulaştırıldı: alfa rampası (0.48–0.90) DEĞİŞMEDİĞİ için,
+     açık zeminde düşük değerlerin kaybolmaması ancak kanalın koyulmasıyla
+     sağlanabiliyor. En zayıf kare (v=1, alfa .50) artık #7fba aa civarı. */
+  --anx-low-rgb:  13,128,91;
+  --anx-mid-rgb:  156,95,8;
+  --anx-high-rgb: 200,30,90;
+  --anx-low:   #0d805b;
+  --anx-mid:   #9c5f08;
+  --anx-high:  #c81e5a;
+  --anx-empty: #e6e6ee;
+  --anx-none:  #8e8ea6;
+
+  /* ── Veri renklerinin yüzey üstü tonu ──
+     Koyu moddaki yüzdeler burada AYNEN kullanılamaz: %7'lik bir tint
+     koyu zeminde görünür bir vurgu yaratır, beyaza yakın zeminde kaybolur.
+     Her seviye göze bakarak yeniden dengelendi (otomatik çarpan yok). */
+  --tint-weak:   14%;    /* kart yıkaması — dekoratif, metnin altında kalır */
+  --tint-soft:   15%;    /* sayaç rakam kutusu zemini */
+  --tint-line:   30%;    /* rakam kutusu kenarlığı — çizgiler belirgin olmalı */
+  --tint-edge:   38%;    /* sınav/kategori kartı kenarlığı */
+  --tint-edge-2: 38%;    /* psikoloji kartı kenarlığı */
+
+  /* ── Gradyanlar ──
+     --grad-brand/-135/green/green-bar/gold token referanslı olduğu için
+     yukarıdaki accent'lerle birlikte kendiliğinden koyulaştı; burada
+     yalnızca sahneye özel koyu gradyanların açık karşılıkları var. */
+  --grad-logo:      linear-gradient(90deg,#7c3aed,#db2777);
+  --grad-streak:    linear-gradient(135deg,#fff6ea,#ffeed9);
+  --grad-pro:       linear-gradient(135deg,#f6efff,#fbf0ff);
+  --grad-boom:      radial-gradient(circle at 50% 35%, #fff1dd, #ffe4c0);
+  --grad-breath:    radial-gradient(circle at 50% 40%, #d9f7ec, #a9e9d6);
+  --grad-breath-halo: radial-gradient(circle, rgba(13,128,91,0.14), transparent 70%);
+  --grad-closing:   linear-gradient(135deg,#e8f8f1,#e6f1fc);
+
+  /* ── Gölge & parıltı ──
+     Açık modda gölge taşıyıcı öğedir; kartlar zeminden gölgeyle ayrılır. */
+  --shadow-card:  0 1px 2px rgba(16,16,32,.05), 0 4px 12px rgba(16,16,32,.07);
+  --shadow-toast: 0 2px 6px rgba(16,16,32,.10), 0 12px 32px rgba(16,16,32,.16);
+  --shadow-knob:  0 1px 3px rgba(16,16,32,.28);
+  --glow-green:   0 6px 20px rgba(13,128,91,.28);
+  --glow-orange:  0 0 44px rgba(168,86,14,.20);
+  --glow-breath:  0 0 40px rgba(13,128,91,.20);
+  --glow-logo:    drop-shadow(0 2px 8px rgba(124,58,237,.28));
+  --glow-logo-lg: drop-shadow(0 3px 12px rgba(124,58,237,.32));
+
+  color-scheme: light;
 }
 
 html, body, #root {
