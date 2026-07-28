@@ -170,8 +170,10 @@ küçük oranlar üretir. Sayfa zemini (L=.874) ile `--anx-low` (L=.163) arasın
    orada metin yok — gereken **aralık**.
 2. `anxColor()`'ın açık mod alfa dalı: low/mid `0.60→1.00`, high `0.58→0.98`.
 
-> Yalnız alfayı değiştirmek → mevcut kanallarla 0 aday. Yalnız kanalı koyulaştırmak →
-> rampa sabitken 0 aday. **İkisi tek bir çözümdür, ayrı ayrı değiştirmeyin.**
+> Yalnız alfayı değiştirmek → mevcut kanallarla 0 aday
+> (`solvers/heatmap-ramp-frontier.mjs`). Yalnız kanalı koyulaştırmak → rampa sabitken
+> 0 aday (`solvers/heatmap-channels-only.mjs`). **İkisi tek bir çözümdür, ayrı ayrı
+> değiştirmeyin.** Çözümü üreten: `solvers/heatmap-ramp.mjs`.
 
 ⚠️ **Koyu modda v=7 karesi sayfa zemininden 2.20:1** — 1.4.11'in altında. Koyu mod referans
 olduğu için dokunulmadı; açık mod aynı yerde 3.17 ile geçiyor.
@@ -194,7 +196,7 @@ borç olarak duruyor — koyu mod referans, dokunulmadı.
 > ⚠️ İlk denemede "hiçbir `--track` değeri iki kısıtı birlikte tutturmuyor, 0 aday"
 > denmişti. **O arama eksikti:** yalnızca kütüğün rengi değişken sayılmıştı. Açık mod
 > yeni, orada korunacak referans yok — **dolgu rengi ve kenarlık da değişkendi.**
-> Üçü birden arandı (`bars.mjs`) ve çözüm çıktı.
+> Üçü birden arandı (`tools/theme-check/solvers/report-bars.mjs`) ve çözüm çıktı.
 
 **(a) Dolgu — `anxBarColor(v, theme)`.** Rapor çubuğu açık modda ısı haritasından **ayrı**
 bir rampa kullanır (taban 0.70). İki sebep: çubuk **kartın** (`#ffffff`) üstünde, ısı
@@ -513,77 +515,66 @@ WKWebView'de güvenilir çalıştığı sabit.
 ### `npm test`
 `src/ink.test.mjs` — ink() sözleşmesi + sabitlerin `index.css` ile eşleşmesi (drift koruması).
 
+### Betikler artık REPODA: `tools/theme-check/`
+
+Eskiden scratchpad'deydiler ve her oturum değişiminde kayboluyorlardı. Artık
+sürümleniyorlar — kurulum, kullanım ve akış **[`tools/theme-check/README.md`](../tools/theme-check/README.md)**
+içinde. Aşağısı yalnızca "neden böyle" notları; **nasıl çalıştırılacağı README'de.**
+
+```bash
+cd tools/theme-check && npm install && npx playwright install webkit
+```
+
+Bağımlılıklar o klasöre **izole**: kendi `package.json`'ı var, kök `package.json`
+ve `package-lock.json` **değişmedi**, `dist/`e hiçbir şey girmiyor.
+
+| Ne lazım | Komut |
+|---|---|
+| Koyu mod regresyonu | `node shoot-all.mjs dark base` → değişikliği uygula → `node shoot-all.mjs dark new` → `node diff-all.mjs base new` |
+| Tek ekran | `node capture.mjs <dark\|light> <çıktı.png> [tab:… btn:… full]` |
+| Kontrast | `node contrast-{anxiety,heatmap,report,psychology,chevrons}.mjs <dark\|light>` |
+| Tema geçişi + S senaryosu | `node theme-transition.mjs` |
+| Bir palet değeri nereden geldi | `solvers/` |
+
+**Referans görüntüler commit EDİLMİYOR** (`shots/`, `.gitignore`'da): her biri ~1–3 MB,
+ekran başına iki kopya, her sürümde yenileniyor. Üç adımlık akışla birkaç dakikada
+yeniden üretiliyor — saklamaya değmez.
+
 ### Koyu mod regresyon testi (piksel farkı) — **en önemli güvenlik ağı**
 
-Playwright + WebKit **kullanıcının reposuna değil**, scratchpad'e kuruldu. Oturum
-değişirse yeniden kurulmalı:
+`shoot-all.mjs` standart **11 ekranı** çeker: `home` · `exams` · `osym` · `manual` ·
+`goals` · `anx` · `anx-low` · `report` · `hub` · `psych-cat` · `breath`.
+Yeni ekran eklerken `SCREENS` sabitine ekleyin; hem referans hem karşılaştırma tarafı
+kendiliğinden kapsar.
 
-```bash
-cd <scratchpad>
-echo '{"name":"scratch","private":true,"type":"module"}' > package.json
-npm install playwright pixelmatch pngjs
-npx playwright install webkit
-```
+**Düzeneğin kendisi test edildi:** `--surface-2`'ye tek hex birimlik değişiklik
+(`#14141f` → `#15151f`) verildi; 11 ekranın **10'unda** yakalandı ve çıkış kodu 1 döndü.
+Yani "hep 0 piksel" çıktısı, ağın çalışmadığı için değil gerçekten fark olmadığı için.
 
-Betikler scratchpad'de: `cap.mjs` (ekran görüntüsü), `diff.mjs` (piksel farkı),
-`states.mjs` (etkileşimli durumlar), `animtest.mjs` (tema geçişi / `theme-anim`),
-`g4cap.mjs` + `g4contrast.mjs` (hedefler/kaygı), `g6cap.mjs` + `g6contrast.mjs` + `chev.mjs` (psikoloji), `heatmap.mjs` (ısı haritası rampası),
-`ramp.mjs`/`ramp3.mjs`/`ramp4.mjs` (rampa çözücüleri), `bars.mjs` (rapor çubuğu arama), `g5cap.mjs` + `g5contrast.mjs`
-(rapor), `track.mjs` (--track ödünleşimi), `contrast.mjs` (WCAG hesabı), `final.mjs`
-(56 çiftlik kontrast tablosu), `mixtest.mjs` (color-mix paritesi),
-`blocks.mjs` (koyu/açık token karşılaştırması).
-**Oturum değişirse bunlar da kaybolur** — grup 3'te `cap.mjs`/`diff.mjs`/`states.mjs`
-sıfırdan yeniden yazıldı, mantıkları aşağıda. (WebKit binary'si
-`~/Library/Caches/ms-playwright` altında kalıyor, yeniden indirilmedi.)
+Tohum veri (`lib/page.mjs` → `SEED` + `shoot-all.mjs`) onboarding'i atlar ve ekranları
+doldurur: `xb_grade="12"` → `hidden` varsayılanı `["LGS"]`, yani FIXED listede hem
+**görünür** (TYT/AYT) hem **gizli** (LGS) kart aynı ekranda; ayrıca bir kullanıcı sınavı,
+dolu ısı haritası, hedefler ve rapor verisi.
 
-`cap.mjs`, onboarding'i atlamak için `addInitScript` ile tohum veri yazıyor:
-`xb_grade="12"` → `hidden` varsayılanı `["LGS"]`, yani FIXED listede hem **görünür**
-(TYT/AYT) hem **gizli** (LGS) kart aynı ekranda; ayrıca bir kullanıcı sınavı
-(`xb_customs`). Böylece `ExamsTab`'in üç bölümü de tek görüntüde yakalanıyor.
-
-Akış:
-
-```bash
-# 1) Referans: değişiklikleri stash'le, Faz 2 durumunu derle, çek
-cd ~/Exam-Bro && git stash -q && npm run build
-cd <scratchpad>
-node cap.mjs dark base-home.png   full
-node cap.mjs dark base-exams.png  tab:Sınavlar full
-node cap.mjs dark base-goals.png  tab:Hedefler full
-node cap.mjs dark base-anx.png    tab:Kaygı    full
-node cap.mjs dark base-report.png tab:Rapor    full
-
-# 2) Değişiklikleri geri al, derle, tekrar çek (new-*.png)
-cd ~/Exam-Bro && git stash pop -q && npm run build
-
-# 3) Karşılaştır — sonuç 0 piksel olmalı
-node diff.mjs '[["base-home.png","new-home.png","home"], …]'
-```
-
-Grup 3'te çekilen 7 ekran (hepsi **0 piksel**): `home` · `exams` · `osym` · `manual` ·
-`goals` · `anx` · `report`. Sınavlar sekmesinin alt görünümleri `btn:` adımıyla açılıyor:
-`node cap.mjs dark new-osym.png tab:Sınavlar "btn:ÖSYM Takvimi" full`
-
-`cap.mjs` kullanımı: `node cap.mjs <dark|light> <çıktı.png> [adım…]`
-adımlar: `tab:Rapor` · `btn:Metin` · `radio:8` · `wait:500` · `full` (tam sayfa).
-Sunucu: `npx vite preview --port 4173 --strictPort` (arka planda).
-
-#### ⚠️ `pg.clock.setFixedTime` ŞART
-`cap.mjs` sayfayı açmadan önce saati donduruyor:
+#### ⚠️ `page.clock.setFixedTime` ŞART
+`lib/page.mjs` sayfayı açmadan önce saati donduruyor:
 
 ```js
-await pg.clock.setFixedTime(new Date("2026-07-28T09:00:00Z"));
+await page.clock.setFixedTime(new Date("2026-07-28T09:00:00Z"));
 ```
 
 Yoksa **geri sayımın saniyeleri sahte fark üretiyor**. İlk denemede ana sayfada 1488
 piksel (%0.08) fark çıktı ve gerçek bir regresyon sanıldı; diff görüntüsüne bakınca
 farkın yalnızca DK/SN hanelerinde olduğu görüldü. Saat dondurulunca 0'a indi.
 
-### Kontrastı GERÇEK PİKSELDEN ölç (`g4contrast.mjs`)
+Tarih `examDates.js`'teki sınavlara göre seçildi. **Değiştirirseniz referans
+görüntülerin tamamını yeniden üretin.**
+
+### Kontrastı GERÇEK PİKSELDEN ölç (`contrast-*.mjs`)
 
 Yarı saydam zeminlerde (`anxColor()` gibi `rgba` yıkamalar) kontrastı elle hesaplamak
 hataya açık: kartın kendi zemini, üstündeki tint, `--bg` ve alfa üst üste biniyor.
-`g4contrast.mjs` bunun yerine öğenin **ekran görüntüsündeki zemin pikselini** okuyup
+`contrast-*.mjs` bunun yerine öğenin **ekran görüntüsündeki zemin pikselini** okuyup
 `getComputedStyle().color` ile karşılaştırıyor — ne render edildiyse o ölçülüyor:
 
 ```js
@@ -600,7 +591,7 @@ Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ö
 ⚠️ **İki tuzak** (ikisi de yaşandı):
 1. **Metinde piksel örneklemesi harfin üstüne düşebilir** → sahte `1.00:1`. Metinlerde
    zemini DOM'dan çöz: ilk **opak** `background-color`'a kadar ataları tara
-   (`g5contrast.mjs` → `RESOLVE_BG`). Piksel örneklemesini yalnızca gerçekten yarı saydam
+   (`lib/page.mjs` → `colorOn()` / `RESOLVE_BG`). Piksel örneklemesini yalnızca gerçekten yarı saydam
    katmanlar için (çubuk, ısı haritası karesi, toggle) kullan.
 2. **"İlk bulunan" öğe en zayıf öğe değildir.** Grafik 2'de ilk çubuk ölçülünce 4.58
    çıkmıştı; **en zayıf** çubuk seçilince 2.69. Bir dizi öğeyi ölçerken her zaman
@@ -764,7 +755,7 @@ Karar verilmedi.
 Mekanizma ve gerekçe **§8 Q**'da. Doğrulama gerçek kod yolundan yapıldı: `preference`
 `system`'e alınıp Playwright `emulateMedia({colorScheme})` ile `prefers-color-scheme`
 değiştirildi → `theme.jsx`'in mq dinleyicisi → `applyTheme(t, true)` → `flashThemeAnim()`.
-Sınıf elle eklenmedi. Betik: scratchpad'de `animtest.mjs`.
+Sınıf elle eklenmedi. Betik: `tools/theme-check/theme-transition.mjs`.
 
 | Ölçüm | Dingin hal | Mod değişimi anı (200ms) | Pencere kapanınca |
 |---|---|---|---|
