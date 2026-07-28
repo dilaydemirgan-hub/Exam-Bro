@@ -952,6 +952,11 @@ function CountCard({ ex }) {
 
 // ── Psychology Hub (premium) ─────────────────────────────────
 function PsychologyHub({ isPremium, psychDone, onToggleDay, onClose, onRequirePremium }) {
+  // PSYCH_COLORS de sınav renkleri gibi VERİ. Bu ekranda accent yalnızca iki yerde
+  // ANLAM taşıyan grafik olarak kullanılıyor (chevron = gezinme göstergesi) →
+  // ink(…, "large") kovası, 3:1 (docs/LIGHT-MODE.md §6 kova 2). Kart gradyanı ve
+  // kenarlığı dekoratif → tint() ham accent ile kalır (kova 3).
+  const { theme } = useTheme();
   const [catId, setCatId] = useState(null);   // selected category
   const [item,  setItem]  = useState(null);   // selected item
 
@@ -991,7 +996,7 @@ function PsychologyHub({ isPremium, psychDone, onToggleDay, onClose, onRequirePr
                     {meta}{it.type === "program" && prog > 0 ? ` · ${prog}/${it.days.length} gün` : ""}
                   </span>
                 </span>
-                <span style={{ color: locked ? "var(--violet)" : accent, display:"flex" }} aria-label={locked ? "Pro içerik" : undefined}>
+                <span style={{ color: locked ? "var(--violet)" : ink(accent, theme, "large"), display:"flex" }} aria-label={locked ? "Pro içerik" : undefined}>
                   {locked ? <IconLock size={18} /> : <IconChevronRight size={18} />}
                 </span>
               </button>
@@ -1021,7 +1026,7 @@ function PsychologyHub({ isPremium, psychDone, onToggleDay, onClose, onRequirePr
                 <span style={{ display:"block", fontSize:17, fontWeight:700, color:"var(--text-1)" }}>{cat.title}</span>
                 <span style={{ display:"block", fontSize:13.5, color:"var(--text-3)", marginTop:4, lineHeight:1.55 }}>{cat.subtitle}</span>
               </span>
-              <span style={{ color:accent, display:"flex" }}><IconChevronRight size={18} /></span>
+              <span style={{ color:ink(accent, theme, "large"), display:"flex" }}><IconChevronRight size={18} /></span>
             </button>
           );
         })}
@@ -1062,7 +1067,7 @@ function LessonReader({ lesson, onClose }) {
           </div>
         ))}
         {lesson.takeaway && (
-          <div style={{ marginTop:8, padding:"16px 18px", background:"var(--surface-2)", borderLeft:"3px solid var(--violet)", borderRadius:12 }}>
+          <div className="themed" style={{ marginTop:8, padding:"16px 18px", background:"var(--surface-2)", borderLeft:"3px solid var(--violet)", borderRadius:12 }}>
             <SectionLabel style={{ color:"var(--violet)", marginBottom:6 }}>aklında kalsın</SectionLabel>
             <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.6, fontStyle:"italic" }}>{lesson.takeaway}</div>
           </div>
@@ -1206,13 +1211,13 @@ function ProgramView({ program, done, onToggle, onClose }) {
         {program.days.map(d => {
           const isDone = done.includes(d.day);
           return (
-            <div key={d.day} style={{ background:"var(--surface-2)", border:`1px solid ${isDone?"var(--green-line)":"var(--border)"}`, borderRadius:16, padding:"16px 18px", marginBottom:12 }}>
+            <div key={d.day} className="themed" style={{ background:"var(--surface-2)", border:`1px solid ${isDone?"var(--green-line)":"var(--border)"}`, borderRadius:16, padding:"16px 18px", marginBottom:12 }}>
               <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
                 <div className="num" style={{ fontSize:12.5, fontWeight:700, color:"var(--blue)", background:"var(--badge-blue-bg)", borderRadius:8, padding:"3px 9px" }}>GÜN {d.day}</div>
                 <div style={{ fontSize:15, fontWeight:600, color:"var(--text-1)", flex:1 }}>{d.title}</div>
               </div>
               <div style={{ fontSize:15, color:"var(--text-2)", lineHeight:1.7, marginBottom:12 }}>{d.body}</div>
-              <div style={{ padding:"12px 14px", background:"var(--surface-1)", borderLeft:"3px solid var(--amber)", borderRadius:10, marginBottom:12 }}>
+              <div className="themed" style={{ padding:"12px 14px", background:"var(--surface-1)", borderLeft:"3px solid var(--amber)", borderRadius:10, marginBottom:12 }}>
                 <SectionLabel style={{ color:"var(--amber)", marginBottom:5 }}>bugünkü görev</SectionLabel>
                 <div style={{ fontSize:15, color:"var(--text-1)", lineHeight:1.6 }}>{d.task}</div>
               </div>
