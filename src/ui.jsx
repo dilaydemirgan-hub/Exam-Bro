@@ -103,8 +103,12 @@ export function EmptyState({ icon, title, body, style }) {
 // tema geçişinden muaf (docs/LIGHT-MODE.md §8).
 export function ProgressBar({ pct, gradient = "linear-gradient(90deg,var(--green),var(--blue))" }) {
   return (
+    // outline (border DEĞİL): border, height:100% olan dolguyu 2px kısaltır ve
+    // koyu modun render'ını değiştirirdi. outline yerleşimi hiç etkilemez;
+    // --track-line koyu modda saydam → koyu mod piksel farkı 0.
     <div role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} className="no-theme-anim"
-      style={{ background: "var(--track)", borderRadius: 999, height: 8, overflow: "hidden" }}>
+      style={{ background: "var(--track)", borderRadius: 999, height: 8, overflow: "hidden",
+        outline: "1px solid var(--track-line)", outlineOffset: -1 }}>
       <div className="no-theme-anim" style={{ background: gradient, height: "100%", width: `${pct}%`, borderRadius: 999, transition: "width 0.4s ease" }} />
     </div>
   );

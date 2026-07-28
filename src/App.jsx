@@ -361,6 +361,29 @@ function anxSolid(v) {
 function anxFill(v, theme) {
   return theme === "light" ? anxSolid(v) : anxColor(v, theme);
 }
+// Lejant karesi HARİTAYI etiketliyor ("bu bandın günü böyle görünür"), o yüzden
+// haritanın rengini kullanır: bandın TAM YOĞUNLUK tonu. Koyu modda --anx-* zaten
+// bandın en koyu karesiyle pratikte aynı (1.22–1.40:1). Açık modda harita kendi
+// koyulaştırılmış kanallarına taşındığı için --anx-* hiçbir kareyle eşleşmiyordu
+// (2.09/1.96/1.53) — lejant işini yapmıyordu. Metin/buton --anx-*'ta KALIR.
+function anxLegend(band, theme) {
+  return theme === "light" ? `rgba(var(--anx-${band}-rgb),1)` : `var(--anx-${band})`;
+}
+// Rapor çubuğu ısı haritasından AYRI bir rampa kullanır — yalnızca AÇIK modda.
+// İki sebep: (1) çubuk KARTIN (#ffffff) üstünde, ısı haritası sayfa zemininin
+// (#f2f2f6) üstünde; (2) çubukta YÜKSEKLİK zaten değeri kodluyor (v*5.5px),
+// yani renkteki rampa orada fazladan bilgi — ısı haritasında yükseklik yok.
+// Ortak rampayla en açık çubuk "kayıt yok" kütüğünden yalnızca 2.58:1 ayrılıyordu
+// (1.4.11 ≥3). Taban 0.70'e çekilince en zayıf ayrım 3.42:1.
+// Isı haritasının tabanı YÜKSELTİLEMEZ: orada bant sınırı düşüyor (§4).
+function anxBarColor(v, theme) {
+  if (theme !== "light") return anxColor(v, theme);
+  const b = anxBand(v);
+  if (!b) return "var(--anx-empty)";
+  const i = b === "high" ? v - 7 : (v - 1) % 3;
+  const n = b === "high" ? 3 : 2;
+  return `rgba(var(--anx-${b}-rgb),${(0.70 + 0.30 * (i / n)).toFixed(2)})`;
+}
 function anxPillStyle(v, theme) {
   if (theme === "light") return { background: anxSolid(v), color: "var(--on-accent)" };
   return {
@@ -1539,9 +1562,9 @@ function AnxietyTab({ log, onRate }) {
         }
       </Card>
       <div style={{ display:"flex", gap:16, marginBottom:14, fontSize:12 }}>
-        {[["var(--anx-low)","1–3 Sakin"],["var(--anx-mid)","4–6 Orta"],["var(--anx-high)","7–10 Yüksek"]].map(([c,l]) => (
+        {[["low","1–3 Sakin"],["mid","4–6 Orta"],["high","7–10 Yüksek"]].map(([b,l]) => (
           <div key={l} style={{ display:"flex", alignItems:"center", gap:5, color:"var(--text-3)" }}>
-            <div style={{ width:11, height:11, borderRadius:3, background:c }} />{l}
+            <div style={{ width:11, height:11, borderRadius:3, background:anxLegend(b, theme) }} />{l}
           </div>
         ))}
       </div>
@@ -1601,7 +1624,8 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const s=studied.includes(d), isT=d===today();
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div className="no-theme-anim" style={{ width:"100%", background:s?"var(--grad-green-bar)":"var(--track)", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
+                {/* Kütüğe kenarlık: koyu modda --track-line saydam → render aynı */}
+                <div className="no-theme-anim" style={{ width:"100%", background:s?"var(--grad-green-bar)":"var(--track)", border:s?"none":"1px solid var(--track-line)", borderRadius:5, height:s?48:8, transition:"height 0.3s", outline:isT?"2px solid var(--gold)":"none", outlineOffset:-1 }} />
                 <div style={{ fontSize:10, color:isT?"var(--gold)":"var(--text-4)", fontWeight:isT?700:400 }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
@@ -1615,7 +1639,7 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const v = anxiety[d];
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div className="no-theme-anim" style={{ width:"100%", background:v?anxColor(v, theme):"var(--track)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
+                <div className="no-theme-anim" style={{ width:"100%", background:v?anxBarColor(v, theme):"var(--track)", border:v?"none":"1px solid var(--track-line)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
                 <div style={{ fontSize:10, color:"var(--text-4)" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );

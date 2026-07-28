@@ -29,6 +29,12 @@
   --border-strong: #3a3a58; /* hedef checkbox çemberi */
   --border-grid: #1a1a3e;   /* kaygı ısı haritası kare kenarlığı */
   --track:       #22223a;   /* ilerleme çubuğu / grafik boş zemin */
+  /* Rapor grafiğindeki "kayıt yok" kütüğünün kenarlığı. Koyu modda YOK:
+     saydam kenarlık, arkasındaki background'ı gösterdiği için (background-clip
+     varsayılanı border-box) kütük birebir aynı render ediliyor — koyu mod
+     piksel farkı 0. Açık modda kütük kartın üstünde 1.29:1 ile kayboluyordu,
+     farkı bu kenarlık taşıyor (docs/LIGHT-MODE.md §4). */
+  --track-line:  transparent;
   --handle:      #2e2e46;   /* sheet tutamacı */
   --switch-off:  #2c2c48;   /* toggle kapalı zemin */
   --switch-knob: #fff;      /* toggle topuzu */
@@ -191,6 +197,7 @@
   --border-strong: #a8a8bd;
   --border-grid: #e0e0e9;
   --track:       #e2e2ea;
+  --track-line:  #7a7a8e;   /* kütük ↔ kart 4.20:1 — kütüğü kartın üstünde tutar */
   --handle:      #d0d0dc;
   --switch-off:  #c3c3d2;
   --switch-knob: #fff;
