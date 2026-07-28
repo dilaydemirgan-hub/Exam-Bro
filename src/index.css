@@ -132,6 +132,7 @@
   /* ── Gölge & parıltı ──
      Koyu modda gölge neredeyse görünmez; ayrım kenarlıkla yapılır.
      Bu yüzden --shadow-card koyu modda YOK, açık modda taşıyıcı öğe. */
+  --selection-bg: rgba(157,92,255,0.32);
   --shadow-card:  none;
   --shadow-toast: 0 8px 30px rgba(0,0,0,0.55);
   --shadow-knob:  0 1px 4px rgba(0,0,0,0.4);
@@ -294,6 +295,7 @@
 
   /* ── Gölge & parıltı ──
      Açık modda gölge taşıyıcı öğedir; kartlar zeminden gölgeyle ayrılır. */
+  --selection-bg: rgba(124,58,237,0.20);
   --shadow-card:  0 1px 2px rgba(16,16,32,.05), 0 4px 12px rgba(16,16,32,.07);
   --shadow-toast: 0 2px 6px rgba(16,16,32,.10), 0 12px 32px rgba(16,16,32,.16);
   --shadow-knob:  0 1px 3px rgba(16,16,32,.28);
@@ -323,6 +325,17 @@ body {
 }
 * { box-sizing: border-box; }
 ::-webkit-scrollbar { width: 0; }
+::selection { background: var(--selection-bg); color: var(--text-1); }
+
+/* ── Tema geçişi ──────────────────────────────────────────────
+   BİLEREK '*' seçicisine konmadı. Sadece yüzey/konteyner öğelerine
+   elle .themed eklenir ve yalnızca background-color + color animasyonu
+   yapar. Muaf tutulanlar (sınıfı ALMAZ): BreathCircle, ilerleme
+   çubukları, "Süpersin!" overlay'i, geri sayım rakam kutuları —
+   bunlarda kendi transform/width/height animasyonları var, tema
+   geçişi eklenirse mod değişiminde sürüklenme görünüyor.
+   prefers-reduced-motion aşağıdaki global blokta zaten kapatıyor. */
+.themed { transition: background-color 180ms ease, color 180ms ease; }
 
 button {
   font-family: var(--font-ui);

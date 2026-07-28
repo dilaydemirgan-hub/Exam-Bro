@@ -64,11 +64,11 @@ export function ConfirmSheet({ open, title, body, confirmLabel = "Onayla", dange
 }
 
 // ── Card ─────────────────────────────────────────────────────
-export function Card({ children, style, ...rest }) {
+export function Card({ children, style, className = "", ...rest }) {
   return (
-    <div style={{
+    <div className={`themed ${className}`.trim()} style={{
       background: "var(--surface-2)", border: "1px solid var(--border-soft)",
-      borderRadius: "var(--r-lg)", padding: 18, ...style,
+      borderRadius: "var(--r-lg)", boxShadow: "var(--shadow-card)", padding: 18, ...style,
     }} {...rest}>{children}</div>
   );
 }

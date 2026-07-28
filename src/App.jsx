@@ -613,7 +613,7 @@ export default function App() {
   ];
 
   return (
-    <div style={S.root}>
+    <div style={S.root} className="themed">
       {showBoom && (
         <div style={S.boom}>
           <div style={{ textAlign:"center", animation:"popIn 0.45s ease" }}>
@@ -635,7 +635,7 @@ export default function App() {
           </div>
         </div>
       )}
-      <header style={S.header}>
+      <header style={S.header} className="themed">
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
           <div style={{ color:"var(--violet)", display:"flex" }}><IconGraduation size={26} /></div>
           <div>
@@ -662,7 +662,7 @@ export default function App() {
                                           notifOn={notifOn} onToggleNotif={toggleNotif}
                                           onChangeGrade={changeGrade} gradeInfo={gradeInfo} />}
       </main>
-      <nav style={S.nav} role="tablist" aria-label="Ana gezinme">
+      <nav style={S.nav} role="tablist" aria-label="Ana gezinme" className="themed">
         {TABS.map(([id, Icon, label]) => {
           const active = tab === id;
           return (

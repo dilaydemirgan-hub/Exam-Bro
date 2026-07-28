@@ -21,6 +21,12 @@
           else if (p === "system") t = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
         } catch (e) { /* storage kapalıysa koyu ile devam */ }
         document.documentElement.setAttribute("data-theme", t);
+        /* theme-color'ı da hemen ayarla, yoksa ilk boyamada çerçeve rengi
+           yanlış çakıyor. Buradaki iki değer index.css'teki --bg ile aynı
+           olmak ZORUNDA (bilinçli tekrar — CSS henüz yüklenmemiş olabilir).
+           React mount olunca theme.jsx bunu hesaplanmış --bg'den tazeliyor. */
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute("content", t === "light" ? "#f2f2f6" : "#080810");
       })();
     </script>
   </head>

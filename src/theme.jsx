@@ -35,8 +35,37 @@ export function resolveTheme(pref) {
   return pref === "light" ? "light" : "dark";
 }
 
+const isNative = () => {
+  try { return !!window.Capacitor?.isNativePlatform?.(); } catch { return false; }
+};
+
+// <meta name="theme-color"> — tarayıcı/PWA çerçevesinin rengi.
+// Değeri elle yazmıyoruz: data-theme yazıldıktan SONRA hesaplanmış --bg'yi
+// okuyoruz, böylece palet değişince burası kendiliğinden takip ediyor.
+function applyThemeColor() {
+  const el = document.querySelector('meta[name="theme-color"]');
+  if (!el) return;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  if (bg) el.setAttribute("content", bg);
+}
+
+// iOS/Android durum çubuğu.
+// DİKKAT: enum isimleri ters okunuyor — plugin'in definitions.d.ts'inden:
+//   Style.Dark  = "Light text for dark backgrounds."  → tema dark
+//   Style.Light = "Dark text for light backgrounds."  → tema light
+// Style.Default KULLANILMIYOR: cihaz görünümünü izler, uygulama içi seçimi ezer.
+async function applyStatusBar(theme) {
+  if (!isNative()) return;
+  try {
+    const { StatusBar, Style } = await import("@capacitor/status-bar");
+    await StatusBar.setStyle({ style: theme === "light" ? Style.Light : Style.Dark });
+  } catch { /* plugin yoksa / web'de sessizce geç */ }
+}
+
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
+  applyThemeColor();
+  applyStatusBar(theme);
 }
 
 const ThemeCtx = createContext(null);
@@ -65,6 +94,16 @@ export function ThemeProvider({ children }) {
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [preference]);
+
+  // iOS uygulama ön plana dönünce durum çubuğu stilini bazen sıfırlıyor →
+  // resume'da tekrar uygula. Yeni bir bağımlılık (@capacitor/app) eklemek
+  // yerine visibilitychange kullanılıyor; App.jsx'teki sayaç da aynı olayı
+  // kullanıyor, WKWebView'de güvenilir çalıştığı sabit.
+  useEffect(() => {
+    const onVis = () => { if (!document.hidden) applyStatusBar(theme); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [theme]);
 
   const setPreference = useCallback(p => {
     const next = PREFS.includes(p) ? p : "dark";
