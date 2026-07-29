@@ -23,7 +23,7 @@
 | 4 | Rapor sekmesine "Görünüm" seçici | ✅ |
 | 5 | iOS widget'ları | ✅ üç boyut yazıldı, köprü uçtan uca doğrulandı |
 | 6 | Uygulama içinden widget sınavı seçme | 🔄 arayüz ✅, köprü Faz 5'te |
-| 7 | Doğrulama | ⬜ başlamadı |
+| 7 | Doğrulama | ✅ (bir madde kısmi — §14) |
 
 Commit geçmişi (yeniden eskiye): `e11eb17` faz3-7 · `76eeb30` docs(§6 düzeltme) ·
 `f1d3858` chore(eslint) · `919cf30` docs · `542d907` chore(düzenek) · `a04d6e7` docs ·
@@ -1326,3 +1326,54 @@ Sınıf elle eklenmedi. Betik: `tools/theme-check/theme-transition.mjs`.
   kaldı, geri sayım 4 → 1 → 3 diye **adım sınırını geçerek** ilerlemeye devam etti.
 - **(d)** Koyu mod piksel farkı **0** (home · exams · report · **breath**).
 - `prefers-reduced-motion: reduce`: `data-theme` yine değişiyor, `.theme-anim` **hiç eklenmiyor**.
+
+---
+
+## 14. Faz 7 — son doğrulama turu ✅
+
+Tarih: dalın son hâli. Her satır **koşularak** doğrulandı, hiçbiri "herhalde çalışıyor" değil.
+
+| Kontrol | Sonuç |
+|---|---|
+| Faz 3 kontrol listesi (22 madde + 3 koşul) | ✅ eksik yok — §7'deki tablo geçerli |
+| Kontrast çiftleri — **açık** | ✅ **63/63 AA** |
+| Kontrast çiftleri — **koyu** | 58/73 · kalan 15 mevcut borç (çoğu `--text-4`), koyu mod referans |
+| Koyu mod piksel farkı | ✅ **14 ekranda 0** |
+| Temiz kurulum → koyu | ✅ cihaz açık modu tercih etse bile `data-theme=dark` |
+| "Sistem" + cihaz modu değişimi | ✅ uygulama **ve widget birlikte** takip ediyor |
+| Widget deep link | 🔶 **kısmi** — aşağıda |
+| Archive + sürüm guard | ✅ **ARCHIVE SUCCEEDED**, app 1.3.0/7 ↔ widget 1.3.0/7 |
+| build / lint / test | ✅ lint yalnızca önceden mevcut `'Icon'` uyarısı |
+| Ham renk taraması | ✅ yalnızca veri renkleri, `rgba(var(--anx-*-rgb))` ve yorumlar |
+| `WidgetTheme.swift` ↔ `index.css` | ✅ `--check` güncel |
+
+### "Sistem" modunda widget takibi — ölçüm
+
+Tercih `system`, cihaz koyudan açığa çevrildi (uygulama **çalışırken**):
+
+| | cihaz KOYU | cihaz AÇIK |
+|---|---|---|
+| App Group payload `theme` | `"dark"` | `"light"` |
+| payload `color` | `#ff4d94` (ham) | `#ae386b` (ink'lenmiş) |
+
+Yani `prefers-color-scheme` → `theme.jsx` mq dinleyicisi → sync effect → App Group
+yazma → `reloadAllTimelines()` zinciri uçtan uca çalışıyor.
+
+### 🔶 Widget deep link — kısmi doğrulandı
+
+**Doğrulanan:** `exambro://` şeması kayıtlı — iOS URL'i tanıyıp *"'Exam Bro' ile
+Açılsın mı?"* diyaloğunu gösteriyor. Native yol (`AppDelegate` → `pendingURL`,
+hem sıcak `open url` hem soğuk `launchOptions[.url]`) ve JS tarafı
+(`consumePendingDeepLink()` → `setTab("exams")`) derleniyor ve bağlı.
+
+**Doğrulanamayan:** sekmenin gerçekten değiştiği. `xcrun simctl openurl` iOS'ta
+her zaman onay diyaloğu açıyor ve bu diyalog programatik kapatılamadı —
+`simctl`de dokunma komutu yok, System Events ile sentetik tıklama da terminale
+Accessibility izni verilmediği için Simulator'a geçmiyor. **Gerçek widget
+dokunuşunda bu diyalog çıkmaz** (aynı uygulamanın kendi extension'ı).
+
+> **Kalan tek elle adım:** widget'ı ana ekrana ekleyip bir kez dokun, Sınavlar
+> sekmesinin açıldığını gözle doğrula. Aynı turda üç boyutun ana ekrandaki
+> gerçek görünümüne de bakmakta fayda var — snapshot'lar View'ları birebir
+> render ediyor ama sistemin çizdiği dış kabuğu (köşe yarıçapı, iOS 17
+> `containerBackground` davranışı) kapsamıyor.
