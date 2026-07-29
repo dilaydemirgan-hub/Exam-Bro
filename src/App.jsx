@@ -11,7 +11,7 @@ import {
   IconHome, IconCalendar, IconTarget, IconPulse, IconChart, IconFlame,
   IconLock, IconChevronRight, IconChevronLeft, IconX, IconPlus, IconCheck, IconBell,
   IconEye, IconEyeOff, IconTrash, IconSparkle, IconWind, IconBook,
-  IconClock, IconSwap, IconGraduation, IconContrast, IconStar,
+  IconClock, IconSwap, IconGraduation, IconContrast, IconStar, IconWidget,
 } from "./icons";
 
 const tap = (style = "light") => {
@@ -1778,6 +1778,12 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
       <Card style={{ padding:"4px 0", marginBottom:20 }}>
         <AppearanceRow />
         <div style={S.divider} />
+        <InfoRow
+          icon={<IconWidget size={19} />}
+          title="Ana Ekran Widget'ı"
+          sub={`Ana ekranda boş bir yere basılı tut, sol üstteki + işaretine dokun, listeden Exam Bro'yu seç. Sınavlar sekmesinde yıldızladığın ${WIDGET_MAX} sınav widget'ta görünür.`}
+        />
+        <div style={S.divider} />
         <SettingsRow
           icon={<IconBell size={19} />}
           title="Günlük hatırlatma"
@@ -1867,6 +1873,22 @@ function AppearanceRow() {
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// Dokunulacak bir şeyi olmayan bilgi satırı. SettingsRow'un DİLİNİ birebir
+// kullanır (aynı ikon+başlık+alt yazı düzeni, aynı padding/puntolar) ama
+// <button> DEĞİL: tıklanınca hiçbir şey olmayan bir buton, ekran okuyucuya
+// ve dokunmatikte kullanıcıya yanlış vaat eder.
+function InfoRow({ icon, title, sub }) {
+  return (
+    <div style={{ display:"flex", width:"100%", alignItems:"flex-start", gap:14, padding:"14px 18px" }}>
+      <span style={{ color:"var(--text-3)", display:"flex", flexShrink:0, marginTop:1 }}>{icon}</span>
+      <span style={{ flex:1 }}>
+        <span style={{ display:"block", fontSize:15, fontWeight:500, color:"var(--text-1)" }}>{title}</span>
+        <span style={{ display:"block", fontSize:12.5, color:"var(--text-4)", marginTop:3, lineHeight:1.5 }}>{sub}</span>
+      </span>
     </div>
   );
 }

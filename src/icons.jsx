@@ -77,6 +77,15 @@ export const IconSettings = p => (
 export const IconSwap = p => (
   <I {...p}><path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8" /></I>
 );
+// Ana ekran widget'ı — büyük kare + küçük kare (widget yerleşimi).
+export const IconWidget = p => (
+  <I {...p}>
+    <rect x="3" y="3" width="8.5" height="8.5" rx="2.5" />
+    <rect x="14.5" y="3" width="6.5" height="6.5" rx="2" />
+    <rect x="3" y="14.5" width="6.5" height="6.5" rx="2" />
+    <rect x="12.5" y="12.5" width="8.5" height="8.5" rx="2.5" />
+  </I>
+);
 // Yıldız — "ana ekran widget'ında göster". `filled` ile dolu/boş.
 export const IconStar = ({ filled, ...p }) => (
   <I {...p}>
