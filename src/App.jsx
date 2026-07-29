@@ -1648,7 +1648,13 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
             const v = anxiety[d];
             return (
               <div key={d} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                <div className="no-theme-anim" style={{ width:"100%", background:v?anxBarColor(v, theme):"var(--track)", border:v?"none":"1px solid var(--track-line)", borderRadius:5, height:v?v*5.5:8, transition:"height 0.3s" }} />
+                {/* Yükseklik: kütük yüksekliği (8) + değere orantılı pay.
+                    Eskiden v*5.5 idi ve v=1 → 5.5px, yani KAYDI OLAN en sakin
+                    gün, hiç kaydı OLMAYAN günün kütüğünden (8px) daha kısa
+                    görünüyordu — "az kaygı" ile "veri yok" ters okunuyordu.
+                    8+v*4.7 ile taban kütüğün üstünde başlıyor (v=1 → 12.7) ve
+                    en yüksek çubuk eskisiyle aynı kalıyor (v=10 → 55). */}
+                <div className="no-theme-anim" style={{ width:"100%", background:v?anxBarColor(v, theme):"var(--track)", border:v?"none":"1px solid var(--track-line)", borderRadius:5, height:v?8+v*4.7:8, transition:"height 0.3s" }} />
                 <div style={{ fontSize:10, color:"var(--text-4)" }}>{new Date(d).toLocaleDateString("tr-TR",{weekday:"narrow"})}</div>
               </div>
             );
