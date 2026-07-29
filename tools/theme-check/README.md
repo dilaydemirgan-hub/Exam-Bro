@@ -108,8 +108,9 @@ okunamaz hale getirir.
 | Betik | Ne yapar |
 |---|---|
 | `capture.mjs` | Tek ekran. `node capture.mjs <dark\|light> <çıktı.png> [adım…]` |
-| `shoot-all.mjs` | Standart 11 ekranı bir önekle çeker |
+| `shoot-all.mjs` | Standart 14 ekranı bir önekle çeker (liste `lib/screens.mjs`'te) |
 | `capture-states.mjs` | Etkileşimli durumlar: dolu form, seçili çip, "Eklendi" rozeti |
+| `capture-boot.mjs` | Açılış: ilk boyama (FOUC penceresi) + Onboard, iki modda |
 
 `capture.mjs` adım dili: `tab:Rapor` · `btn:Metin` · `radio:8` · `wait:500` ·
 `full` (tam sayfa).
@@ -138,12 +139,27 @@ açık modun hedefi koyu moda eşit ya da ondan iyi olmak.
 | `contrast-psychology.mjs` | Psikoloji: gradyan zeminli metinler, nefes çemberi |
 | `contrast-chevrons.mjs` | Chevron ikonları — anlam taşıyan grafik, 3:1 |
 | `contrast-overlays.mjs` | Paywall, onay sheet'i, toast: metinler, gradyan CTA, ikon çipi ve yüzey ↔ perde sınırı |
+| `contrast-sweep.mjs` | **Hepsi**: 14 ekranın her metin düğümünü gezer, renk+zemin+kova ile tekilleştirir. "Tüm çiftler AA mı" sorusunun cevabı bu |
 
 ### Davranış
 
 | Betik | Ne doğrular |
 |---|---|
 | `theme-transition.mjs` | `theme-anim` geçici sınıfı: mod değişiminde açılıyor, 200ms sonra kapanıyor, muaf öğelere dokunmuyor, `prefers-reduced-motion`'da hiç eklenmiyor, **BreathingPlayer çalışırken nefes döngüsü kesilmiyor**, **paywall (e) ve onay sheet'i (f) açıkken mod değişimi** |
+
+#### Faz 4 / Faz 6 arayüzü
+
+| Betik | Ne doğrular |
+|---|---|
+| `appearance.mjs` | "Görünüm" seçicisi: yeni metinlerin kontrastı + radiogroup klavye deseni (ok/Home/End, roving tabindex), anında uygulama, "Sistem"de cihazı izleme |
+| `widget-select.mjs` | Widget sınav seçimi: yıldız/rozet kontrastı, varsayılan (en yakın tarih), en fazla 2 (3. reddediliyor + toast), sıra korunması, yeniden yüklemede kalıcılık |
+| `capture-boot.mjs` | Açılış: ilk boyamada `data-theme` + `theme-color` doğru mu, Onboard metinleri AA mı |
+
+> ⚠️ `widget-select.mjs` yıldızları **erişilebilir adlarından** buluyor,
+> `button[aria-pressed]` ile DEĞİL: FIXED kartlarının görünürlük butonu da
+> `aria-pressed` taşıyor ve seçici onları da yakalıyordu (ölçüm yanlış öğeden
+> okunuyor, tıklama yanlış butona gidiyordu).
+
 
 ### `solvers/` — değerlerin nereden geldiği
 

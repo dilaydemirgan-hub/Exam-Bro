@@ -19,10 +19,10 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 **7 grubun 7'si de bitti** — kapanış maddeleri sürüyor |
+| 3 | Eksiksiz uygulama | ✅ 7 grup + kapanış maddeleri |
 | 4 | Rapor sekmesine "Görünüm" seçici | ✅ |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
-| 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
+| 6 | Uygulama içinden widget sınavı seçme | 🔄 arayüz ✅, köprü Faz 5'te |
 | 7 | Doğrulama | ⬜ başlamadı |
 
 Commit geçmişi (yeniden eskiye): `e11eb17` faz3-7 · `76eeb30` docs(§6 düzeltme) ·
@@ -869,16 +869,69 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 
 ---
 
-## 12. Faz 6 — Uygulama içinden widget sınavı seçme (başlamadı)
+## 12. Faz 6 — Uygulama içinden widget sınavı seçme — **arayüz ✅, köprü Faz 5'te**
 
-- Sınav listesinde her satıra "widget'ta göster" işaretleyicisi (yıldız ya da checkbox).
-- **En fazla 2 sınav.** 3.'yü seçmeye çalışınca ne olacağı (nazik uyarı mı, en eskiyi
-  otomatik bırakma mı) **gerekçelendirilerek seçilecek** — henüz karar verilmedi.
-- Seçim `localStorage`'da **ve** App Group'ta saklanır.
-- **Sıra önemli:** 1. seçilen sınav Small widget'ta görünen olur; sıralama kullanıcıya gösterilir.
-- Hiç seçim yoksa ve takip edilen sınav varsa, tarihi **en yakın** olan varsayılan işaretlenir.
-- Rapor'daki tema seçicinin yanına ya da Ayarlar'a küçük bir **"Ana Ekran Widget'ı"**
-  bilgi kartı: nasıl ekleneceğini 1-2 cümleyle anlatır.
+`src/widget.js` (yeni) + `WidgetStar` (`App.jsx`) + `IconStar` (`icons.jsx`).
+Betik: **`tools/theme-check/widget-select.mjs`**.
+
+Sınav listesindeki **her satırda** yıldız var — hem `FIXED` (ulusal) hem
+"Eklediğim Sınavlar". Seçiliyken yıldız dolu, `--gold`, ve üstünde **sıra rozeti**.
+
+### ⚠️ 3. sınavı seçmeye çalışınca: REDDEDİLİR (sessizce kırpılmaz)
+
+Toast: *"Widget'ta en fazla 2 sınav gösterilebilir. Önce birini kaldır."*
+Seçim **hiç değişmez**.
+
+**Neden "en eskiyi otomatik bırak" değil:** burada sıra **anlamlı** — 1. seçilen
+Small widget'ta görünen sınav. Otomatik düşürme iki şeyi aynı anda ve görünmez
+biçimde değiştirirdi: (a) kullanıcının açıkça seçtiği bir sınavı siler,
+(b) sıra kayacağı için **Small widget'ın içeriği de** sessizce değişir. İkisi de
+kullanıcının istemediği, geri alması zor sonuçlar. Sınır zaten yalnızca 2, yani
+"önce birini kaldır" maliyeti tek dokunuş. Reddetme **öngörülebilir ve yıkıcı değil**.
+
+### Sıra ve varsayılan
+
+- Yeni seçim **sona** eklenir; ilk seçilen 1. sırada kalır.
+- 1. kaldırılınca 2. **1'e yükselir** (ölçüldü).
+- Sıra kullanıcıya iki yerden söyleniyor: yıldızın üstündeki **rozet (1/2)** ve
+  liste başındaki açıklama satırı — *"…en fazla 2. **1** numaralı sınav küçük
+  widget'ta görünür."*
+- Hiç seçim yokken tarihi **en yakın** sınav varsayılan işaretlenir.
+  `null` (hiç seçilmemiş) ile `[]` (bilerek hiçbiri) **farklı**: varsayılan
+  yalnızca `null`'da devreye girer, kullanıcı hepsini kaldırırsa geri gelmez.
+- Widget seçimi **sayaç görünürlüğünden bağımsız**: gizli bir sınav da
+  yıldızlanabilir. Bilerek — ikisini bağlamak görünmez bir yan etki olurdu.
+
+### Kontrast (yeni eklenen her şey)
+
+| | Koyu | Açık |
+|---|---|---|
+| seçili yıldız (`--gold`) | 10.98 ✓ | 5.18 ✓ |
+| seçilmemiş yıldız (`--text-4`) | 3.22 ✓ | 5.20 ✓ |
+| sıra rozeti (`--on-gold` / `--gold`) | 11.17 ✓ | 5.18 ✓ |
+| açıklama satırı (`--text-4`) | **3.39 ✗** | 4.93 ✓ |
+
+> Açıklama satırındaki koyu mod 3.39'u **miras**: hemen üstündeki mevcut
+> "Karta dokunarak sayacı göster ya da gizle" satırı da `--text-4` ile tam olarak
+> 3.39 veriyor. Faz 4'teki alt açıklamayla aynı durum ve aynı gerekçe (§10).
+
+### Depolama ve Faz 5 bağlantı noktası
+
+`localStorage` → `xb_widget_exams`, `["<id>", "<id>"]`. Uygulamanın geri kalanı
+Preferences kullanıyor; burada `localStorage` **bilerek** seçildi (widget köprüsü
+senkron okuyabilmeli, tema tercihiyle aynı yerde dursun).
+
+> **`syncToWidget(payload)` — `src/widget.js`.** Gövdesi **bilerek boş.** Faz 5'te
+> yalnızca burası doldurulacak: App Group'a (`group.com.exambroapp.sinav`) JSON yaz
+> + `WidgetCenter.shared.reloadAllTimelines()`. **Çağrı yerleri zaten bağlı**
+> (`App.jsx`): widget seçimi değişince, sınav listesi değişince, tema değişince.
+> Gönderilen `payload` §11'deki köprü sözleşmesiyle birebir aynı şekilde —
+> `theme` **çözülmüş** değer (asla `"system"`), `exams` en fazla 2 eleman.
+> Faz 5'te `App.jsx`'e dokunmak gerekmemeli.
+
+### Kalan (Faz 5/6 ile birlikte)
+- Rapor'a küçük bir **"Ana Ekran Widget'ı"** bilgi kartı (nasıl eklenir) — ⬜.
+  Widget gerçekten var olmadan yazılması anlamsız, Faz 5'e bırakıldı.
 
 ---
 

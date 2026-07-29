@@ -6,11 +6,12 @@ import { scheduleDailyNotifications, cancelDailyNotifications, refreshIfEnabled,
 import { useToast, ConfirmSheet, Card, SectionLabel, EmptyState, ProgressBar } from "./ui";
 import { useTheme } from "./theme.jsx";
 import { ink } from "./ink";
+import { readWidgetIds, writeWidgetIds, defaultWidgetIds, syncToWidget, WIDGET_MAX } from "./widget";
 import {
   IconHome, IconCalendar, IconTarget, IconPulse, IconChart, IconFlame,
   IconLock, IconChevronRight, IconChevronLeft, IconX, IconPlus, IconCheck, IconBell,
   IconEye, IconEyeOff, IconTrash, IconSparkle, IconWind, IconBook,
-  IconClock, IconSwap, IconGraduation, IconContrast,
+  IconClock, IconSwap, IconGraduation, IconContrast, IconStar,
 } from "./icons";
 
 const tap = (style = "light") => {
@@ -371,7 +372,7 @@ function anxLegend(band, theme) {
 }
 // Rapor çubuğu ısı haritasından AYRI bir rampa kullanır — yalnızca AÇIK modda.
 // İki sebep: (1) çubuk KARTIN (#ffffff) üstünde, ısı haritası sayfa zemininin
-// (#f2f2f6) üstünde; (2) çubukta YÜKSEKLİK zaten değeri kodluyor (v*5.5px),
+// (#f2f2f6) üstünde; (2) çubukta YÜKSEKLİK zaten değeri kodluyor (8+v*4.7px),
 // yani renkteki rampa orada fazladan bilgi — ısı haritasında yükseklik yok.
 // Ortak rampayla en açık çubuk "kayıt yok" kütüğünden yalnızca 2.58:1 ayrılıyordu
 // (1.4.11 ≥3). Taban 0.70'e çekilince en zayıf ayrım 3.42:1.
@@ -422,6 +423,7 @@ function phaseOf(label) {
 
 // ── Root ─────────────────────────────────────────────────────
 export default function App() {
+  const { theme } = useTheme();   // widget köprüsü çözülmüş temayı gönderiyor (Faz 5)
   const [loaded,    setLoaded]    = useState(false);
   const [grade,     setGrade]     = useState("");
   const [tab,       setTab]       = useState("home");
@@ -444,6 +446,7 @@ export default function App() {
   // notifications & dialogs
   const [notifOn,      setNotifOn]      = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [widgetIds,   setWidgetIds]   = useState(readWidgetIds);   // null = hiç seçilmemiş
   const { toast, toastEl } = useToast();
   const notifRefreshed = useRef(false);
 
@@ -626,6 +629,50 @@ export default function App() {
   const futureCustoms  = customs.slice().sort((a, b) => new Date(a.date) - new Date(b.date)).filter(ex => new Date(ex.date) > Date.now());
   const allExams       = [...visFixed, ...futureCustoms];
 
+  // ── Widget sınav seçimi (Faz 6) ──
+  // widgetIds === null → kullanıcı hiç seçim yapmadı; aşağıdaki effect en yakın
+  // tarihli sınavı işaretler. Boş dizi "bilerek hiçbiri" demek, ona dokunulmaz.
+  const widgetExams = (widgetIds || [])
+    .map(id => allExams.find(e => e.id === id))
+    .filter(Boolean);                     // silinen/geçmişte kalan sınavı düşür
+
+  useEffect(() => {
+    if (!loaded || widgetIds !== null) return;
+    const def = defaultWidgetIds(allExams);
+    if (def.length) setWidgetIds(def);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, widgetIds, allExams.length]);
+
+  // Seçim / sınav listesi / tema değişince köprüyü besle (gövdesi Faz 5'te dolacak).
+  useEffect(() => {
+    if (!loaded || widgetIds === null) return;
+    writeWidgetIds(widgetIds);
+    syncToWidget({
+      theme,                              // ÇÖZÜLMÜŞ değer — "system" olmaz
+      exams: widgetExams.map(ex => ({
+        id: ex.id, name: ex.n,
+        date: (examInfoFor(ex)?.date || new Date(ex.date)).toISOString(),
+        color: ex.c,
+      })),
+      updatedAt: new Date().toISOString(),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, widgetIds, theme, allExams.length]);
+
+  // SIRA ÖNEMLİ: yeni seçim sona eklenir, ilk seçilen 1. sırada kalır ve
+  // Small widget'ta o görünür. Üçüncüyü sessizce kırpmak yerine REDDEDİYORUZ —
+  // gerekçe docs/LIGHT-MODE.md §12.
+  const toggleWidgetExam = ex => {
+    tap();
+    const cur = widgetIds || [];
+    if (cur.includes(ex.id)) { setWidgetIds(cur.filter(i => i !== ex.id)); return; }
+    if (cur.length >= WIDGET_MAX) {
+      toast(`Widget'ta en fazla ${WIDGET_MAX} sınav gösterilebilir. Önce birini kaldır.`);
+      return;
+    }
+    setWidgetIds([...cur, ex.id]);
+  };
+
   const notifCtx = () => ({
     exams: [
       ...visFixed.map(ex => { const info = examInfoFor(ex); return info ? { name: ex.n, ms: info.ms } : null; }).filter(Boolean),
@@ -715,7 +762,7 @@ export default function App() {
       </header>
       <main style={S.scroll}>
         {tab === "home"    && <HomeTab    motivText={motivText} cbt={cbtTip} doneToday={doneToday} streak={streak} onStudied={markStudied} exams={allExams} onOpenPsych={() => setPsychOpen(true)} isPremium={isPremium} />}
-        {tab === "exams"   && <ExamsTab   grade={grade} hidden={hidden} onToggle={toggleHide} customs={customs} onAdd={addExam} onDel={delExam} />}
+        {tab === "exams"   && <ExamsTab   grade={grade} hidden={hidden} onToggle={toggleHide} customs={customs} onAdd={addExam} onDel={delExam} widgetIds={widgetIds || []} onWidgetToggle={toggleWidgetExam} />}
         {tab === "goals"   && <GoalsTab   grade={grade} goals={goals} onAdd={addGoal} onToggle={toggleGoal} onDel={delGoal} />}
         {tab === "anxiety" && <AnxietyTab log={anxiety} onRate={rateAnxiety} />}
         {tab === "report"  && <ReportTab  studied={studied} streak={streak} anxiety={anxiety} goals={goals}
@@ -1305,7 +1352,32 @@ function Paywall({ priceString, purchasing, onBuy, onRestore, onClose }) {
 }
 
 // ── Exams ────────────────────────────────────────────────────
-function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
+// Widget işaretleyicisi. Seçiliyken SIRA rozeti taşır — 1. seçilen Small
+// widget'ta görünen sınav, bu yüzden sıra kullanıcıya gösterilmek zorunda.
+function WidgetStar({ on, order, onClick, name }) {
+  return (
+    <button onClick={onClick} className="pressable" aria-pressed={on}
+      aria-label={on ? `${name} widget'ta ${order}. sırada — kaldırmak için dokun`
+                     : `${name} sınavını ana ekran widget'ında göster`}
+      style={{
+        position:"relative", width:44, height:44, flexShrink:0, background:"transparent",
+        border:"none", cursor:"pointer", display:"flex", alignItems:"center",
+        justifyContent:"center", color: on ? "var(--gold)" : "var(--text-4)",
+      }}>
+      <IconStar size={19} filled={on} />
+      {on && (
+        <span aria-hidden="true" style={{
+          position:"absolute", top:7, right:3, minWidth:14, height:14, padding:"0 3px",
+          borderRadius:999, background:"var(--gold)", color:"var(--on-gold)",
+          fontSize:9.5, fontWeight:700, lineHeight:1,
+          display:"flex", alignItems:"center", justifyContent:"center",
+        }}>{order}</span>
+      )}
+    </button>
+  );
+}
+
+function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel, widgetIds, onWidgetToggle }) {
   // Sınav rengi VERİ. Bu sekmede METİN olarak kullanıldığı 7 yerde açık modda
   // ink()'ten geçer (docs/LIGHT-MODE.md §6). Hepsi kova 1 (normal metin, 4.5:1):
   // en büyüğü 16px/600, hiçbiri WCAG'in "büyük metin" eşiğini (18.66px bold)
@@ -1394,28 +1466,41 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
       <div style={S.pageTitle}>Sınavlarım</div>
       <div style={S.pageSub}>Görmek istediklerini seç, istediklerini ekle</div>
       <SectionLabel>Ulusal Sınavlar</SectionLabel>
-      <div style={{ fontSize:12.5, color:"var(--text-4)", marginBottom:12 }}>Karta dokunarak sayacı göster ya da gizle</div>
+      <div style={{ fontSize:12.5, color:"var(--text-4)", marginBottom:6 }}>Karta dokunarak sayacı göster ya da gizle</div>
+      {/* Sıra kullanıcıya BURADA söyleniyor: rozetteki 1 küçük widget'a gider. */}
+      <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12.5, color:"var(--text-4)", marginBottom:12 }}>
+        <span style={{ color:"var(--gold)", display:"flex", flexShrink:0 }}><IconStar size={14} filled /></span>
+        <span>Ana ekran widget'ında göster — en fazla {WIDGET_MAX}. <strong style={{ fontWeight:600 }}>1</strong> numaralı sınav küçük widget'ta görünür.</span>
+      </div>
       {FIXED.map(ex => {
         const hide = hidden.includes(ex.id);
         const info = examInfoFor(ex);
         const r = remaining(info ? info.date : ex.date);
         const c = ink(ex.c, theme);
         return (
-          <button key={ex.id} onClick={() => { tap(); onToggle(ex.id); }} className="pressable"
-            aria-pressed={!hide} aria-label={`${ex.n} sayacı ${hide ? "gizli" : "görünür"}`}
-            style={{ display:"flex", width:"100%", textAlign:"left", background:hide?"var(--surface-1)":`linear-gradient(135deg,${tint(ex.c, "--tint-weak", "12")},transparent)`, border:`1px solid ${hide?"var(--border-soft)":tint(ex.c, "--tint-edge", "30")}`, borderRadius:"var(--r-md)", padding:"14px 16px", marginBottom:8, justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.55:1, transition:"all 0.2s", color:"inherit" }}>
-            <span>
-              <span style={{ display:"block", fontWeight:600, fontSize:16, color:hide?"var(--text-4)":c }}>{ex.n}{info?.isEstimate ? " (tahmini)" : ""}</span>
-              <span style={{ display:"block", fontSize:11.5, color:"var(--text-4)", marginTop:3 }}>{(info ? info.date : new Date(ex.date)).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</span>
-            </span>
-            <span style={{ display:"flex", gap:12, alignItems:"center" }}>
-              {info?.isExamDay && !hide && <span style={{ fontSize:13, color:c, fontWeight:700 }}>bugün! 🍀</span>}
-              {!info?.isExamDay && !r.done && !hide && <span className="num" style={{ fontSize:14, color:c }}>{r.d}g</span>}
-              <span style={{ color: hide ? "var(--text-4)" : "var(--text-2)", display:"flex" }}>
-                {hide ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+          // Kart artık <div>: içine iki ayrı buton giriyor (görünürlük + widget
+          // yıldızı) ve buton içinde buton geçersiz HTML olurdu. Kart görünümü
+          // (zemin/kenarlık/radius) dış kaba taşındı, iç buton saydam.
+          <div key={ex.id}
+            style={{ display:"flex", alignItems:"center", background:hide?"var(--surface-1)":`linear-gradient(135deg,${tint(ex.c, "--tint-weak", "12")},transparent)`, border:`1px solid ${hide?"var(--border-soft)":tint(ex.c, "--tint-edge", "30")}`, borderRadius:"var(--r-md)", marginBottom:8, transition:"all 0.2s" }}>
+            <button onClick={() => { tap(); onToggle(ex.id); }} className="pressable"
+              aria-pressed={!hide} aria-label={`${ex.n} sayacı ${hide ? "gizli" : "görünür"}`}
+              style={{ flex:1, minWidth:0, display:"flex", textAlign:"left", background:"transparent", border:"none", padding:"14px 4px 14px 16px", justifyContent:"space-between", alignItems:"center", cursor:"pointer", opacity:hide?0.55:1, color:"inherit" }}>
+              <span>
+                <span style={{ display:"block", fontWeight:600, fontSize:16, color:hide?"var(--text-4)":c }}>{ex.n}{info?.isEstimate ? " (tahmini)" : ""}</span>
+                <span style={{ display:"block", fontSize:11.5, color:"var(--text-4)", marginTop:3 }}>{(info ? info.date : new Date(ex.date)).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</span>
               </span>
-            </span>
-          </button>
+              <span style={{ display:"flex", gap:12, alignItems:"center" }}>
+                {info?.isExamDay && !hide && <span style={{ fontSize:13, color:c, fontWeight:700 }}>bugün! 🍀</span>}
+                {!info?.isExamDay && !r.done && !hide && <span className="num" style={{ fontSize:14, color:c }}>{r.d}g</span>}
+                <span style={{ color: hide ? "var(--text-4)" : "var(--text-2)", display:"flex" }}>
+                  {hide ? <IconEyeOff size={20} /> : <IconEye size={20} />}
+                </span>
+              </span>
+            </button>
+            <WidgetStar name={ex.n} on={widgetIds.includes(ex.id)}
+              order={widgetIds.indexOf(ex.id) + 1} onClick={() => onWidgetToggle(ex)} />
+          </div>
         );
       })}
       {customs.length > 0 && (
@@ -1431,8 +1516,10 @@ function ExamsTab({ grade, hidden, onToggle, customs, onAdd, onDel }) {
                   {ex.sub && <div style={{ fontSize:12.5, color:"var(--text-3)", marginTop:2 }}>{ex.sub}</div>}
                   <div style={{ fontSize:11.5, color:"var(--text-4)", marginTop:2 }}>{new Date(ex.date).toLocaleDateString("tr-TR",{day:"2-digit",month:"long",year:"numeric"})}</div>
                 </div>
-                <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                  <span className="num" style={{ fontSize:14, color:c||"var(--gold)" }}>{r.done?"✓":`${r.d}g`}</span>
+                <div style={{ display:"flex", gap:2, alignItems:"center" }}>
+                  <span className="num" style={{ fontSize:14, color:c||"var(--gold)", marginRight:4 }}>{r.done?"✓":`${r.d}g`}</span>
+                  <WidgetStar name={ex.n} on={widgetIds.includes(ex.id)}
+                    order={widgetIds.indexOf(ex.id) + 1} onClick={() => onWidgetToggle(ex)} />
                   <button onClick={() => { tap(); onDel(ex.id); }} className="pressable" aria-label={`${ex.n} sınavını sil`}
                     style={{ background:"transparent", border:"none", color:"var(--danger-muted)", width:44, height:44, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <IconTrash size={18} />

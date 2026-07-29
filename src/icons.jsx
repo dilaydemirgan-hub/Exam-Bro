@@ -77,6 +77,13 @@ export const IconSettings = p => (
 export const IconSwap = p => (
   <I {...p}><path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8" /></I>
 );
+// Yıldız — "ana ekran widget'ında göster". `filled` ile dolu/boş.
+export const IconStar = ({ filled, ...p }) => (
+  <I {...p}>
+    <path d="m12 3.6 2.65 5.37 5.93.86-4.29 4.18 1.01 5.9L12 17.13l-5.3 2.78 1.01-5.9-4.29-4.18 5.93-.86z"
+      fill={filled ? "currentColor" : "none"} />
+  </I>
+);
 // Yarısı dolu çember — "görünüm / kontrast". Dolu yarı currentColor ile
 // boyanıyor (base'in fill:none'ı burada bilerek eziliyor).
 export const IconContrast = p => (
