@@ -950,6 +950,62 @@ daha sabitleniyor** — `"light"` değilse `"dark"`, yani köprüye **asla `"sys
 gitmez**. Hata yutuluyor (widget target'ı yokken uygulama çalışmaya devam etmeli),
 konsola bir kez uyarı basılıyor.
 
+### Aşama 1b — Xcode kurulumu PROGRAMATİK yapıldı ✅
+
+**`tools/ios-setup/add-widget-target.rb`** (idempotent). Elle tıklanacak 17 adımın
+**16'sı** betikte; kalan tek şey Apple hesabındaki App Group kaydı (aşağıda).
+
+**Neden `xcodeproj` gem'i, ham pbxproj değil:** tek bir native target ~12 nesne
+gerektiriyor (PBXNativeTarget, XCConfigurationList, 2× XCBuildConfiguration, üç
+build phase, ürün referansı, PBXGroup, her dosya için PBXBuildFile,
+PBXContainerItemProxy + PBXTargetDependency, PBXCopyFilesBuildPhase) ve hepsi
+24 haneli UUID'lerle birbirine bağlı. Elle üretmek UUID çakışması riski taşır ve
+diff'i okunamaz yapar. `xcodeproj` CocoaPods/fastlane'in kütüphanesi, dosyayı
+deterministik yazıyor.
+
+#### ⚠️ İki tuzak — ikisi de yaşandı, ikisi de ölçümle yakalandı
+
+**1 · xcconfig yolu yanlışsa `xcodebuild` HATA VERMEZ.** Referans önce
+`App/Version.xcconfig` verildi; main group `ios/App`'e çözülüyor (Capacitor'ın
+`debug.xcconfig` referansı `../debug.xcconfig` olduğu için), yani doğru yol
+`Version.xcconfig`. Yanlış yolda xcconfig **sessizce yok sayıldı** ve sürümler
+kayboldu. `XB_VERSION_SOURCE` sentinel'i tam bunun için vardı — `showBuildSettings`
+çıktısında boş gelince anlaşıldı.
+
+**2 · Base configuration PROJE seviyesine konmalı, target'a değil.** App'in Debug
+slotu Capacitor'ın `debug.xcconfig`'iyle **dolu**, ve o dosya `cap sync`
+tarafından ezilebilir. Xcode'un çözüm sırası — proje xcconfig → proje ayarı →
+target xcconfig → target ayarı — sayesinde `Version.xcconfig` proje seviyesinden
+App'e de sızıyor. **Varsayım bırakılmadı**, dört kombinasyonda doğrulandı:
+
+| | `XB_VERSION_SOURCE` | `MARKETING_VERSION` | `CAPACITOR_DEBUG` |
+|---|---|---|---|
+| App / Debug | xcconfig ✓ | 1.3.0 ✓ | true ✓ (korundu) |
+| App / Release | xcconfig ✓ | 1.3.0 ✓ | — |
+| Widget / Debug · Release | xcconfig ✓ | 1.3.0 ✓ | — |
+
+#### Doğrulananlar
+- Simülatör derlemesi **BUILD SUCCEEDED** (değişiklikten önce baseline de alındı).
+- `ExamBroWidget.appex` → `App.app/PlugIns/` içine gömülüyor.
+- Sürümler eşleşiyor (app 1.3.0/7, widget 1.3.0/7),
+  `NSExtensionPointIdentifier = com.apple.widgetkit-extension`.
+- **Guard gerçek `xcodebuild`'de denendi:** `MARKETING_VERSION=1.3.1` override'ıyla
+  build okunabilir hatayla **DURDU**.
+- **`npx cap sync ios` target'a DOKUNMUYOR** — sync sonrası `pbxproj` diff'i boş,
+  derleme yine başarılı. Rutin akış widget'ı bozmuyor.
+
+#### 🔴 Kodla YAPILAMAYAN tek şey: Apple hesabında App Group kaydı
+İmzalı cihaz derlemesi (`-sdk iphoneos`) **her iki target'ta** şu hatayı veriyor:
+
+```
+Provisioning profile "..." doesn't support the group.com.exambroapp.sinav App Group.
+Provisioning profile "..." doesn't include the App Groups capability.
+```
+
+Bu, Apple Developer hesabında yapılacak bir kayıt — **bilerek yapılmadı**, çünkü
+kullanıcının geliştirici hesabını değiştiren dışa dönük bir işlem
+(`-allowProvisioningUpdates` bunu otomatik yapabilirdi). Adımlar kullanıcıya verildi.
+
 ### ⚠️ Aşama 2 — Xcode'da elle yapılacak adımlar
 Target ekleme, App Group capability, signing — bunlar **uydurulmadı**. Emin
 olunmayan noktalar rapor içinde **açıkça işaretlendi**. Adım listesi kullanıcıya
