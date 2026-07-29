@@ -222,7 +222,12 @@
   --text-1: #17171f;
   --text-2: #3f3f52;
   --text-3: #55556b;
-  --text-4: #6b6b82;
+  /* Koyu moddaki muadili gibi "ipucu/meta" olarak seçilmişti, ama bu token
+     sınav TARİHİNİ de taşıyor — dekorasyon değil bilgi. --tint-weak yıkamalı
+     sınav kartlarının üstünde 4.29/4.47 ile eşiğin bir tık altında kalıyordu
+     (düz yüzeylerde zaten 5.18 ile geçiyordu). %4 koyulaştırıldı:
+     tint'li kartta 4.56 ✓, beyaz kartta 5.51 ✓. Koyu mod ayrı değer, etkilenmez. */
+  --text-4: #67677d;
   --on-accent: #fff;
   --on-green:  #fff;   /* açık modda yeşil KOYU → üstüne beyaz yazı */
   --on-gold:   #fff;   /* açık modda sarı KOYU → üstüne beyaz yazı */

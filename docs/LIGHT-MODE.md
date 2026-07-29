@@ -101,7 +101,7 @@ kaldırıldı (özellik kalıtsal).
 | `--surface-2` | `#14141f` | `#ffffff` |
 | `--border` | `#23233a` | `#d5d5e0` |
 | `--text-1` | `#f2f2f8` | `#17171f` |
-| `--text-4` | `#62627e` | `#6b6b82` |
+| `--text-4` | `#62627e` | `#67677d` |
 | `--violet` | `#9d5cff` | `#7c3aed` |
 | `--pink` | `#ff4d94` | `#db2777` |
 | `--green` | `#10d99e` | `#0d805b` |
@@ -527,15 +527,12 @@ textarea, select — bileşen uygulamada yok).
 
 #### 22 — görseller hakkında bildirim
 
-- `src/assets/hero.png`, `react.svg`, `vite.svg` → **hiçbir yerden referans verilmiyor**
-  (ölü dosyalar). Açık mod açısından sorun değil; istenirse ayrı bir temizlik commit'i.
+- `src/assets/hero.png`, `react.svg`, `vite.svg` → hiçbir yerden referans verilmiyordu,
+  **silindi** (`chore: remove unused assets`).
 - `public/icon-192.png` / `icon-512.png` → PWA kurulum ikonları. Koyu zeminli, ama bunlar
   **işletim sisteminin ana ekranında** görünüyor, uygulamanın açık zemininde değil —
   sabit marka varlığı, temayla değişmesi beklenmez. **Açık modda bir sorun yaratmıyor.**
-- ⚠️ **Ayrı bir kusur (açık modla ilgisi yok):** `icon-512.png`'nin ortasında amaçlanan
-  simge yerine **eksik glif kutusu (tofu)** var — ikon üretilirken bir emoji
-  render edilememiş. Önceden mevcut; App Store'daki iOS ikonu ayrı dosya, etkilenmiyor.
-  Düzeltmek ikon yeniden üretmek demek, bu çalışmanın kapsamı dışında — **karar sizin.**
+  Tofu kusuru için §13'teki "bilinen sorunlar" satırına bakın.
 
 ### Bu projede **N/A** olan kontrol listesi maddeleri
 - **Scrollbar rengi** → `::-webkit-scrollbar { width: 0 }`, tamamen gizli.
@@ -743,21 +740,18 @@ Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ö
   > | | Açık | Koyu |
   > |---|---|---|
   > | benzersiz çift | 62 | 72 |
-  > | AA'yı geçen | **60/62** | 57/72 |
+  > | AA'yı geçen | **62/62 ✓** | 57/72 |
   >
-  > **Açık modda kalan 2 çift, koyu modda AYNI YERDE daha kötü** — yani açık moda
-  > özgü regresyon yok:
+  > **Açık modun TAMAMI AA.** Koyu moddaki 15 eksik mevcut borç (çoğu `--text-4`),
+  > koyu mod referans olduğu için dokunulmadı.
   >
-  > | Yer | Açık | Koyu |
-  > |---|---|---|
-  > | `ExamsTab` sınav tarihi (11.5px `--text-4`, tint'li kart) | 4.29 / 4.47 ✗ | 3.29 / 3.31 ✗ |
-  >
-  > `--text-4` `index.css`'te **"ipucu / meta — yalnızca dekoratif"** olarak
-  > tanımlı ve açık modda her yerde geçiyor (beyaz kartta 5.18); yalnızca
-  > **tint yıkamalı sınav kartlarında** eşiğin bir tık altına düşüyor.
-  > **Tek dokunuşluk çözüm var:** `--text-4` açık modda `#6b6b82` → **`#67677d`**
-  > (%4 koyu) → tint'li kartta **4.56 ✓**, beyazda 5.51 ✓, koyu mod etkilenmez.
-  > Palet kararı olduğu için **uygulanmadı, kullanıcıya soruldu.**
+  > ✅ **`--text-4` düzeltmesi.** İlk süpürmede açık modda 2 çift kalmıştı:
+  > `ExamsTab` sınav tarihi (11.5px `--text-4`), `--tint-weak` yıkamalı kartın
+  > üstünde **4.29 / 4.47 ✗**. Token "ipucu/meta — yalnızca dekoratif" diye
+  > seçilmişti ama **sınav tarihi dekorasyon değil bilgi**, o yüzden muafiyet
+  > gerekçesi burada zayıf kaldı. Açık modda `#6b6b82` → **`#67677d`** (%4 koyu):
+  > tint'li kartta **4.56 ✓**, beyaz kartta 5.51 ✓. Tek token, koyu mod ayrı
+  > değer taşıdığı için **piksel farkı 0**.
   >
   > Süpürmenin **kapsam sınırı** çıktıda açıkça yazılıyor: katlamanın altındaki
   > öğeler o ekranda ölçülmüyor (kaydırma adımı gerekir), overlay'in ardında
@@ -851,7 +845,38 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | **W — lejant ↔ ısı haritası görsel dili** | ✅ **çözüldü** — A seçeneği, `anxLegend()` (§4) |
 | **Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden KISA** | ⬜ **Faz 3 bittikten SONRA, ayrı `fix:` commit'i.** Gerçek bug ama renkle ilgisi yok; düzeltmek koyu modun render'ını da değiştireceği için rapor ekranının piksel referansı yeniden alınmalı. Detay §4 |
 | **Overlay yüzeyi ↔ perde** | ✅ **çözüldü** — açık mod perdesi %35 → **%45** (kullanıcı kararı). Açık mod 2.43 → **3.68** (en kötü hal 3.36) ✓. Koyu mod 1.36 ile mevcut borç, dokunulmadı. Detay aşağıda |
+| **PWA ikonunda eksik glif (tofu)** | ⬜ **açık — kapsam dışı bırakıldı.** `public/icon-{192,512}.png` ortasında boş kutu. Yalnızca **PWA kurulumunda** görünür; App Store iOS ikonu ve Android native ikonu ayrı dosyalardan geliyor, etkilenmiyor. Açık modla ilgisi yok. Düzeltme adımları aşağıda |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
+
+### PWA ikonunda eksik glif (tofu) — açılmış, düzeltilmedi
+
+**Ne:** `public/icon-512.png` (ve muhtemelen `icon-192.png`) ortasında amaçlanan
+simge yerine **boş dikdörtgen** var — ikon üretilirken bir emoji/glif font'ta
+bulunamamış ve "tofu" olarak render edilmiş.
+
+**Nerede görünüyor:**
+- PWA olarak kurulunca **ana ekran ikonu** (Android/Chrome "Ana ekrana ekle").
+- `public/manifest.json` → `icons[]` bu iki dosyayı gösteriyor.
+- Chrome'un kurulum/uygulama listesi görünümleri.
+
+**Nerede görünmüyor — App Store sürümü etkilenmiyor:** iOS uygulama ikonu
+Xcode target'ındaki `Assets.xcassets/AppIcon` içinden geliyor, bu PNG'lerden
+**değil**. Android'in native ikonu da `android/app/src/main/res/mipmap-*`
+altında, yine ayrı. Yani canlı mağaza sürümlerinde bu kusur görünmüyor;
+etkisi yalnızca **PWA kurulumuyla** sınırlı.
+
+**Düzeltmek için ne gerekiyor:**
+1. Kaynak ikonu (`~/Desktop/app/exam-bro/exam-bro-icon.svg` ya da
+   `exam-bro-icon-1024.png`) glif sorunu olmayan bir ortamda 512 ve 192'ye
+   yeniden dışa aktar — ya da emojiyi **path'e çevir** (metin olarak bırakma;
+   tofu tam olarak bundan çıkıyor).
+2. `public/icon-192.png` ve `public/icon-512.png`'yi değiştir.
+3. PWA'da ikon agresif önbellekleniyor: kurulu bir kopyada doğrularken
+   uygulamayı kaldırıp yeniden kur.
+
+**Açık modla ilgisi yok** — Faz 3 kontrol listesinin 22. maddesini gezerken
+tesadüfen bulundu. Kapsam dışı bırakıldı (kullanıcı onayıyla), unutulmasın
+diye buraya yazıldı.
 
 ### Overlay yüzeyi ↔ perde — ölçüm ve çözüm hesabı
 
