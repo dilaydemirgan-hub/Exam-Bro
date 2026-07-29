@@ -21,8 +21,13 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "WidgetBridgePlugin"
     public let jsName = "WidgetBridge"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "sync", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "consumePendingURL", returnType: CAPPluginReturnPromise)
     ]
+
+    /// Widget deep link'i. AppDelegate yazar, JS bir kez okuyup tüketir.
+    /// @capacitor/app eklememek için mevcut köprü kullanılıyor.
+    public static var pendingURL: String?
 
     /// Widget extension'ı da AYNI sabiti kullanır (ExamBroWidget/SharedStore.swift).
     static let appGroup = "group.com.exambroapp.sinav"
@@ -56,5 +61,12 @@ public class WidgetBridgePlugin: CAPPlugin, CAPBridgedPlugin {
         shared.set(json, forKey: Self.payloadKey)
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve()
+    }
+
+    /// Bekleyen widget deep link'ini döndürür ve TÜKETİR (bir kez okunur).
+    @objc func consumePendingURL(_ call: CAPPluginCall) {
+        let url = Self.pendingURL
+        Self.pendingURL = nil
+        call.resolve(["url": url as Any])
     }
 }

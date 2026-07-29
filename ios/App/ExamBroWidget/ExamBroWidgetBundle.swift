@@ -1,10 +1,5 @@
 //  ExamBroWidgetBundle.swift
-//
-//  ⚠️ AŞAMA 1 İSKELETİ — Aşama 2'de üç boyutun gerçek tasarımıyla değiştirilecek.
-//  Şu anki hâli KASITLI olarak minimum: target'ın gerçekten derlendiğini,
-//  App Group'tan okuduğunu ve temayı köprüden aldığını doğrulamak için var.
-//  Bir app extension'ın @main giriş noktası olmadan link edilemez, o yüzden
-//  target oluşturulurken bu dosya da gerekliydi.
+//  Widget giriş noktası: timeline sağlayıcı + boyut seçimi.
 
 import WidgetKit
 import SwiftUI
@@ -15,14 +10,16 @@ struct ExamBroEntry: TimelineEntry {
 }
 
 struct ExamBroProvider: TimelineProvider {
-    // Galeride/yüklenirken boş görünmesin diye dolu örnek.
+    /// Galeride ve yüklenirken BOŞ görünmesin diye dolu örnek.
+    /// Gerçek veri yokken de widget'ın ne işe yaradığı anlaşılmalı.
     private var sample: WidgetPayload {
-        WidgetPayload(
-            theme: "dark",
-            exams: [WidgetExam(id: "TYT", name: "TYT",
-                               date: Calendar.current.date(byAdding: .day, value: 42, to: Date()) ?? Date(),
-                               color: "#9d5cff")],
-            updatedAt: Date())
+        let cal = ExamCountdown.calendar
+        let d1 = cal.date(byAdding: .day, value: 42, to: Date()) ?? Date()
+        let d2 = cal.date(byAdding: .day, value: 96, to: Date()) ?? Date()
+        return WidgetPayload(theme: "dark", exams: [
+            WidgetExam(id: "TYT", name: "TYT", date: d1, color: "#9d5cff"),
+            WidgetExam(id: "AYT", name: "AYT/YDT", date: d2, color: "#ff4d94"),
+        ], updatedAt: Date())
     }
 
     func placeholder(in context: Context) -> ExamBroEntry {
@@ -30,45 +27,65 @@ struct ExamBroProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (ExamBroEntry) -> Void) {
+        // Galeri önizlemesi (isPreview) her zaman dolu; gerçek snapshot App Group'tan.
         let payload = context.isPreview ? sample : SharedStore.load()
         completion(ExamBroEntry(date: Date(), payload: payload))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<ExamBroEntry>) -> Void) {
-        // Aşama 2: gece yarısı yeniden hesaplama + Large'daki saat için saatlik refresh.
-        let entry = ExamBroEntry(date: Date(), payload: SharedStore.load())
-        let next = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        let now = Date()
+        let cal = ExamCountdown.calendar
+        let payload = SharedStore.load()
+
+        // Saatlik giriş (Large'daki saat için) + GECE YARISI kesin bir giriş:
+        // gün sayısı tam orada değişiyor, saat başlarına bırakılırsa
+        // "kalan gün" bir sonraki saate kadar bayat kalırdı.
+        var dates: Set<Date> = [now]
+        if let firstHour = cal.nextDate(after: now,
+                                        matching: DateComponents(minute: 0, second: 0),
+                                        matchingPolicy: .nextTime) {
+            for i in 0..<24 {
+                dates.insert(firstHour.addingTimeInterval(Double(i) * 3600))
+            }
+        }
+        if let midnight = cal.nextDate(after: now,
+                                       matching: DateComponents(hour: 0, minute: 0, second: 0),
+                                       matchingPolicy: .nextTime) {
+            dates.insert(midnight)
+        }
+
+        let entries = dates.sorted().map { ExamBroEntry(date: $0, payload: payload) }
+        completion(Timeline(entries: entries, policy: .atEnd))
     }
 }
 
 struct ExamBroWidgetView: View {
     let entry: ExamBroEntry
-    // Tema App Group'tan; @Environment(\.colorScheme) BİLEREK kullanılmıyor —
-    // kullanıcının uygulama içi seçimi kazanmalı (docs/LIGHT-MODE.md §11).
+    @Environment(\.widgetFamily) private var family
+
+    // ⚠️ Tema App Group'tan gelen çözülmüş değerden. @Environment(\.colorScheme)
+    // BİLEREK kullanılmıyor — uygulama içi seçim cihaz görünümünü yenmeli.
     private var theme: WidgetTheme { WidgetTheme.named(entry.payload.theme) }
+    private var exams: [WidgetExam] { entry.payload.exams }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if let exam = entry.payload.exams.first {
-                Text(exam.name)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(theme.text3)
-                Text("\(max(0, Calendar.current.dateComponents([.day], from: Date(), to: exam.date).day ?? 0))")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(theme.text1)
-                Text("gün")
-                    .font(.system(size: 12))
-                    .foregroundStyle(theme.text4)
-            } else {
-                Text("Uygulamadan sınav seç")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(theme.text3)
-            }
+        content
+            .widgetContainerBackground(theme.bg)
+            // Dokununca ilgili sınav ekranı açılsın; sınav yoksa uygulama açılsın.
+            .widgetURL(exams.first.flatMap { ExamCountdown.deepLink(examID: $0.id) }
+                       ?? URL(string: "exambro://exams"))
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch family {
+        case .systemSmall:
+            SmallView(exam: exams.first, theme: theme, now: entry.date)
+        case .systemLarge:
+            LargeView(exams: exams, theme: theme, now: entry.date)
+        default:
+            MediumView(exams: exams, theme: theme, now: entry.date)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(14)
-        .widgetContainerBackground(theme.bg)
     }
 }
 
@@ -77,8 +94,8 @@ struct ExamBroWidget: Widget {
         StaticConfiguration(kind: "ExamBroWidget", provider: ExamBroProvider()) { entry in
             ExamBroWidgetView(entry: entry)
         }
-        .configurationDisplayName("Exam Bro")
-        .description("Sınav geri sayımı")
+        .configurationDisplayName("Sınav Geri Sayımı")
+        .description("Seçtiğin sınavlara kalan günü ana ekranında gör.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

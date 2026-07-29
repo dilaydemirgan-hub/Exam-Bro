@@ -66,6 +66,27 @@ export function defaultWidgetIds(exams) {
  * yokken uygulamanın çalışmaya devam etmesi gerekiyor. Teşhis için konsola
  * bir kez uyarı basılır.
  */
+/**
+ * Widget'a dokunulduysa bekleyen deep link'i alır ve TÜKETİR (bir kez okunur).
+ * `exambro://exam/<id>` ya da `exambro://exams`.
+ *
+ * `@capacitor/app` **eklenmedi** — yeni bağımlılık gerektirmesin diye mevcut
+ * köprü plugin'i kullanılıyor. Native tarafta AppDelegate URL'i yakalayıp
+ * `WidgetBridgePlugin.pendingURL`'e yazıyor (hem sıcak `open url` hem soğuk
+ * açılıştaki `launchOptions[.url]` yolu bağlı).
+ *
+ * @returns {Promise<string|null>} sınav id'si, ya da liste için "" , yoksa null
+ */
+export async function consumePendingDeepLink() {
+  if (!Capacitor?.isNativePlatform?.()) return null;
+  try {
+    const { url } = await WidgetBridge.consumePendingURL();
+    if (typeof url !== "string" || !url.startsWith("exambro://")) return null;
+    const m = url.match(/^exambro:\/\/exam\/(.+)$/);
+    return m ? decodeURIComponent(m[1]) : "";
+  } catch { return null; }
+}
+
 let warned = false;
 
 export async function syncToWidget(payload) {

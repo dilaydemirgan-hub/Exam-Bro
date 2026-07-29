@@ -115,7 +115,8 @@ def ensure_file(project, group, rel_name, target)
   ref
 end
 
-%w[ExamBroWidgetBundle.swift SharedStore.swift WidgetTheme.swift WidgetCompat.swift].each do |f|
+%w[ExamBroWidgetBundle.swift WidgetViews.swift ExamCountdown.swift
+   SharedStore.swift WidgetTheme.swift WidgetCompat.swift].each do |f|
   ensure_file(project, group, f, widget)
   log.call("#{WIDGET} ← #{f}")
 end

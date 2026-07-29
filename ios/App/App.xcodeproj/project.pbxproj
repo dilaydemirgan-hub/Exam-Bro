@@ -21,6 +21,8 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		67945E0B772E58A1AAAA5ED8 /* ExamBroWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */; };
 		735928B69F2E1BC5E5E39ACF /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A62BDB2138799682C73AC0 /* SharedStore.swift */; };
+		806225E5DD9041F8F6C78893 /* WidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587647D447E4A422F743A511 /* WidgetViews.swift */; };
+		9720CF6ADA225006DFFD109D /* ExamCountdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA85485363EAA990D3A682E /* ExamCountdown.swift */; };
 		C50BB3B2BCC72EAD2C33D705 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */; };
 /* End PBXBuildFile section */
 
@@ -50,6 +52,7 @@
 
 /* Begin PBXFileReference section */
 		0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ExamBroWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0EA85485363EAA990D3A682E /* ExamCountdown.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExamCountdown.swift; sourceTree = "<group>"; };
 		26AC66AFC45480A182858F05 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExamBroWidgetBundle.swift; sourceTree = "<group>"; };
@@ -62,6 +65,7 @@
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		5256C49411FB3A3EC3B2EA21 /* WidgetTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
+		587647D447E4A422F743A511 /* WidgetViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetViews.swift; sourceTree = "<group>"; };
 		60A62BDB2138799682C73AC0 /* SharedStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
 		6FF19E05C2F0A8949BCE01E5 /* ExamBroWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ExamBroWidget.entitlements; sourceTree = "<group>"; };
 		8407F4850A8E75F743ACEDD2 /* Version.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
@@ -102,6 +106,8 @@
 				E07F27A2C374C8A809325213 /* WidgetCompat.swift */,
 				97B17C9EF6A4423DF5800716 /* Info.plist */,
 				6FF19E05C2F0A8949BCE01E5 /* ExamBroWidget.entitlements */,
+				587647D447E4A422F743A511 /* WidgetViews.swift */,
+				0EA85485363EAA990D3A682E /* ExamCountdown.swift */,
 			);
 			name = ExamBroWidget;
 			path = ExamBroWidget;
@@ -324,6 +330,8 @@
 				735928B69F2E1BC5E5E39ACF /* SharedStore.swift in Sources */,
 				0B1A47162D0A5EA78ABC10FD /* WidgetTheme.swift in Sources */,
 				283C9AD299C72176588A4745 /* WidgetCompat.swift in Sources */,
+				806225E5DD9041F8F6C78893 /* WidgetViews.swift in Sources */,
+				9720CF6ADA225006DFFD109D /* ExamCountdown.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

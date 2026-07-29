@@ -34,9 +34,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
+        // Widget deep link'i (exambro://…) burada yakalanıp saklanıyor; JS tarafı
+        // WidgetBridge.consumePendingURL ile bir kez okuyup tüketiyor.
+        // @capacitor/app EKLENMEDİ — yeni bağımlılık gerektirmesin diye mevcut
+        // köprü plugin'i kullanılıyor (docs/LIGHT-MODE.md §12).
+        if url.scheme == "exambro" {
+            WidgetBridgePlugin.pendingURL = url.absoluteString
+        }
         // Called when the app was launched with a url. Feel free to add additional processing here,
         // but if you want the App API to support tracking app url opens, make sure to keep this call
         return ApplicationDelegateProxy.shared.application(app, open: url, options: options)
+    }
+
+    func application(_ application: UIApplication,
+                     willFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // SOĞUK AÇILIŞ: uygulama widget'a dokunularak sıfırdan başlatıldıysa
+        // `open url` çağrılmayabilir, URL launchOptions'ta gelir.
+        if let url = launchOptions?[.url] as? URL, url.scheme == "exambro" {
+            WidgetBridgePlugin.pendingURL = url.absoluteString
+        }
+        return true
     }
 
     func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {

@@ -6,7 +6,7 @@ import { scheduleDailyNotifications, cancelDailyNotifications, refreshIfEnabled,
 import { useToast, ConfirmSheet, Card, SectionLabel, EmptyState, ProgressBar } from "./ui";
 import { useTheme } from "./theme.jsx";
 import { ink } from "./ink";
-import { readWidgetIds, writeWidgetIds, defaultWidgetIds, syncToWidget, WIDGET_MAX } from "./widget";
+import { readWidgetIds, writeWidgetIds, defaultWidgetIds, syncToWidget, consumePendingDeepLink, WIDGET_MAX } from "./widget";
 import {
   IconHome, IconCalendar, IconTarget, IconPulse, IconChart, IconFlame,
   IconLock, IconChevronRight, IconChevronLeft, IconX, IconPlus, IconCheck, IconBell,
@@ -658,6 +658,20 @@ export default function App() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, widgetIds, theme, allExams.length]);
+
+  // Widget'a dokunulduysa Sınavlar sekmesine geç. Hem açılışta hem ön plana
+  // dönünce bakılıyor (uygulama açıkken widget'a dokunulmuş olabilir).
+  useEffect(() => {
+    if (!loaded) return;
+    const check = async () => {
+      const target = await consumePendingDeepLink();
+      if (target !== null) { setPsychOpen(false); setPaywallOpen(false); setTab("exams"); }
+    };
+    check();
+    const onVis = () => { if (!document.hidden) check(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [loaded]);
 
   // SIRA ÖNEMLİ: yeni seçim sona eklenir, ilk seçilen 1. sırada kalır ve
   // Small widget'ta o görünür. Üçüncüyü sessizce kırpmak yerine REDDEDİYORUZ —
