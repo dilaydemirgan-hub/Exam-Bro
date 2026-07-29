@@ -12,6 +12,31 @@ import { registerPlugin, Capacitor } from "@capacitor/core";
 /** Native tarafı: ios/App/App/WidgetBridge.swift (@objc(WidgetBridgePlugin)). */
 const WidgetBridge = registerPlugin("WidgetBridge");
 
+/**
+ * ⚠️ `registerPlugin` proxy'si bu plugin'i GÖREMİYOR — ölçüldü.
+ *
+ * Capacitor `Capacitor.PluginHeaders` listesini bridge init sırasında, yani
+ * SPM paketlerinden gelen plugin'lerden üretiyor. UYGULAMA TARGET'INDAKİ yerel
+ * plugin ise `capacitorDidLoad()` içinde `bridge.registerPluginType(...)` ile
+ * kaydediliyor ve bu, header üretimi için GEÇ kalıyor. Sonuç: native tarafta
+ * plugin kayıtlı ama JS proxy'si "not implemented on ios" diye reddediyor.
+ * Simülatörde doğrulandı — PluginHeaders çıktısında WidgetBridge yok:
+ *   ["CapacitorHttp","Console","WebView","CapacitorCookies","SystemBars",
+ *    "StatusBar","Keyboard","Preferences","Haptics","SplashScreen",
+ *    "Purchases","LocalNotifications"]
+ *
+ * `Capacitor.nativePromise(plugin, method, options)` ise doğrudan NATIVE kayıt
+ * defterine gidiyor, yani geç kaydedilmiş plugin'i buluyor. Proxy'yi yedek
+ * olarak tutuyoruz: ileride plugin SPM paketine taşınırsa o yol da çalışır.
+ */
+function callBridge(method, options) {
+  const cap = typeof window !== "undefined" ? window.Capacitor : undefined;
+  if (typeof cap?.nativePromise === "function") {
+    return cap.nativePromise("WidgetBridge", method, options);
+  }
+  return WidgetBridge[method](options);
+}
+
 export const WIDGET_KEY = "xb_widget_exams";
 /** Small/Medium widget iki sınavdan fazlasını okunur biçimde gösteremiyor. */
 export const WIDGET_MAX = 2;
@@ -48,6 +73,29 @@ export function defaultWidgetIds(exams) {
 }
 
 /**
+ * Widget'a dokunulduysa bekleyen deep link'i alır ve TÜKETİR (bir kez okunur).
+ * `exambro://exam/<id>` ya da `exambro://exams`.
+ *
+ * `@capacitor/app` **eklenmedi** — yeni bağımlılık gerektirmesin diye mevcut
+ * köprü plugin'i kullanılıyor. Native tarafta AppDelegate URL'i yakalayıp
+ * `WidgetBridgePlugin.pendingURL`'e yazıyor (hem sıcak `open url` hem soğuk
+ * açılıştaki `launchOptions[.url]` yolu bağlı).
+ *
+ * @returns {Promise<string|null>} sınav id'si, ya da liste için "" , yoksa null
+ */
+export async function consumePendingDeepLink() {
+  if (!Capacitor?.isNativePlatform?.()) return null;
+  try {
+    const { url } = await callBridge("consumePendingURL", {});
+    if (typeof url !== "string" || !url.startsWith("exambro://")) return null;
+    const m = url.match(/^exambro:\/\/exam\/(.+)$/);
+    return m ? decodeURIComponent(m[1]) : "";
+  } catch { return null; }
+}
+
+let warned = false;
+
+/**
  * Seçimi native köprüye gönderir: App Group'a yazılır + widget timeline'ları
  * yeniden yüklenir. Native tarafı `ios/App/App/WidgetBridge.swift`.
  *
@@ -66,36 +114,13 @@ export function defaultWidgetIds(exams) {
  * yokken uygulamanın çalışmaya devam etmesi gerekiyor. Teşhis için konsola
  * bir kez uyarı basılır.
  */
-/**
- * Widget'a dokunulduysa bekleyen deep link'i alır ve TÜKETİR (bir kez okunur).
- * `exambro://exam/<id>` ya da `exambro://exams`.
- *
- * `@capacitor/app` **eklenmedi** — yeni bağımlılık gerektirmesin diye mevcut
- * köprü plugin'i kullanılıyor. Native tarafta AppDelegate URL'i yakalayıp
- * `WidgetBridgePlugin.pendingURL`'e yazıyor (hem sıcak `open url` hem soğuk
- * açılıştaki `launchOptions[.url]` yolu bağlı).
- *
- * @returns {Promise<string|null>} sınav id'si, ya da liste için "" , yoksa null
- */
-export async function consumePendingDeepLink() {
-  if (!Capacitor?.isNativePlatform?.()) return null;
-  try {
-    const { url } = await WidgetBridge.consumePendingURL();
-    if (typeof url !== "string" || !url.startsWith("exambro://")) return null;
-    const m = url.match(/^exambro:\/\/exam\/(.+)$/);
-    return m ? decodeURIComponent(m[1]) : "";
-  } catch { return null; }
-}
-
-let warned = false;
-
 export async function syncToWidget(payload) {
   if (!Capacitor?.isNativePlatform?.()) return;   // web/PWA'da widget yok
   try {
     // Savunma amaçlı: köprüye "system" ASLA gitmemeli. Çağıran zaten çözülmüş
     // değeri veriyor (App.jsx → useTheme().theme), burada bir kez daha sabitliyoruz.
     const theme = payload?.theme === "light" ? "light" : "dark";
-    await WidgetBridge.sync({ json: JSON.stringify({ ...payload, theme }) });
+    await callBridge("sync", { json: JSON.stringify({ ...payload, theme }) });
   } catch (err) {
     if (!warned) {
       warned = true;

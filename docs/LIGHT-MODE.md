@@ -21,7 +21,7 @@
 | 2 | Açık mod paleti | ✅ `42f84dc` |
 | 3 | Eksiksiz uygulama | ✅ 7 grup + kapanış maddeleri |
 | 4 | Rapor sekmesine "Görünüm" seçici | ✅ |
-| 5 | iOS widget'ları | 🔄 Aşama 1 (keşif+hazırlık) ✅ · Aşama 2 Xcode adımlarını bekliyor |
+| 5 | iOS widget'ları | ✅ üç boyut yazıldı, köprü uçtan uca doğrulandı |
 | 6 | Uygulama içinden widget sınavı seçme | 🔄 arayüz ✅, köprü Faz 5'te |
 | 7 | Doğrulama | ⬜ başlamadı |
 
@@ -1006,7 +1006,74 @@ Bu, Apple Developer hesabında yapılacak bir kayıt — **bilerek yapılmadı**
 kullanıcının geliştirici hesabını değiştiren dışa dönük bir işlem
 (`-allowProvisioningUpdates` bunu otomatik yapabilirdi). Adımlar kullanıcıya verildi.
 
-### ⚠️ Aşama 2 — Xcode'da elle yapılacak adımlar
+### Aşama 2 — widget'lar yazıldı ✅
+
+Üç boyut: `WidgetViews.swift` (Small/Medium/Large), giriş noktası
+`ExamBroWidgetBundle.swift`, tarih/durum mantığı `ExamCountdown.swift`.
+
+#### 🔴 Yerel Capacitor plugin'i kaydetmek — üç adımda çözüldü
+
+Köprü ilk kurulduğunda **hiç çalışmadı**; sebebi ancak simülatör konsolundan
+adım adım bulundu. Sırayla:
+
+| Belirti | Gerçek sebep | Çözüm |
+|---|---|---|
+| `"WidgetBridge" plugin is not implemented on ios` | Capacitor 8, **uygulama target'ındaki** yerel plugin'i otomatik keşfetmiyor | `MainViewController: CAPBridgeViewController` + `capacitorDidLoad()`, storyboard'un sınıfı değiştirildi |
+| Kayıt çalışıyor ama JS hâlâ göremiyor | `Capacitor.PluginHeaders` bridge init'te SPM paketlerinden üretiliyor; `capacitorDidLoad`'daki kayıt o liste için **geç** | JS `Capacitor.nativePromise(plugin, method, opts)` ile doğrudan native kayıt defterine gidiyor |
+| `Error loading plugin WidgetBridge for call` | `registerPluginType(_:)` tipten örnek üretemiyor | **`registerPluginInstance(WidgetBridgePlugin())`** |
+
+Üçü de **ölçümle** bulundu — `xcrun simctl launch --console-pty` ile uygulamanın
+stdout'u okundu. (Capacitor `print()` kullandığı için `log show`'da görünmüyor.)
+Ölçülen `PluginHeaders` çıktısı, `WidgetBridge`'in orada olmadığını gösterdi:
+`["CapacitorHttp","Console","WebView","CapacitorCookies","SystemBars","StatusBar",
+"Keyboard","Preferences","Haptics","SplashScreen","Purchases","LocalNotifications"]`
+
+#### Uçtan uca doğrulama (simülatör, gerçek çalışma)
+
+`containerURL(forSecurityApplicationGroupIdentifier:)` **nil DÖNMÜYOR** — App
+Group konteyneri oluştu ve yazma başarılı. Payload App Group'ta:
+
+```json
+{"theme":"dark", "exams":[{"id":"AYT","name":"AYT/YDT",
+ "date":"2027-06-21T07:15:00.000Z","color":"#ff4d94"}], "updatedAt":"…"}
+```
+
+Tema tercihi `light`'a çevrilip uygulama yeniden açıldığında payload **kendiliğinden**:
+
+```json
+{"theme":"light", …, "color":"#ae386b"}
+```
+
+`theme` çözülmüş değere, `color` ise §6'daki **ink'lenmiş** tona geçti
+(`#ff4d94` → `#ae386b`). Yani App Group'a yazma + `reloadAllTimelines()` zinciri
+ve tema takibi çalışıyor.
+
+> ⚠️ **Sınav rengi payload'da ink()'ten geçmiş hâlde gidiyor.** İlk sürümde ham
+> veri rengi gönderiliyordu ve açık modda widget'ta okunmuyordu (`#10d99e`
+> açık zeminde 1.7:1 — snapshot'ta "LGS" ve "Bugün!" neredeyse görünmezdi).
+> `ink()` Swift'e **portlanmadı**; tek kaynak JS'te kaldı.
+
+#### Snapshot düzeneği — neden ana ekran görüntüsü değil
+
+Simülatörün ana ekranına widget **eklemek script'lenemiyor** (`simctl`de komut
+yok, tek yol elle sürükle-bırak). `ExamBroWidgetSnapshots` logic-test target'ı
+aynı View'ları aynı ölçülerde (158×158 / 338×158 / 338×354) `ImageRenderer` ile
+PNG'ye basıyor: **22 görüntü**, 3 boyut × 2 tema × {2, 1, 0 sınav} +
+"Bugün!"/"Geçti". Yakalamadığı tek şey sistemin çizdiği dış kabuk.
+
+```bash
+TEST_RUNNER_SNAPSHOT_DIR=<klasör> xcodebuild test -project ios/App/App.xcodeproj \
+  -scheme ExamBroWidgetSnapshots -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+> `SNAPSHOT_DIR` değil **`TEST_RUNNER_SNAPSHOT_DIR`**: xcodebuild kabuk ortamını
+> test sürecine geçirmiyor, yalnızca `TEST_RUNNER_` önekli değişkenleri iletiyor
+> (öneki soyarak). Öneksiz ilk denemede PNG'ler simülatör kum havuzuna yazıldı.
+
+Ayrıca iki davranış testi: **negatif gün asla sızmıyor** (−10…+10 gün taraması)
+ve tema çözümlemesi (`"system"`/`nil` → koyu).
+
+### ⚠️ Aşama 2 — Xcode'da elle yapılacak adımlar (tamamlandı)
 Target ekleme, App Group capability, signing — bunlar **uydurulmadı**. Emin
 olunmayan noktalar rapor içinde **açıkça işaretlendi**. Adım listesi kullanıcıya
 "hangi ekran, hangi buton" düzeyinde ayrıca verildi.

@@ -16,6 +16,7 @@
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		3526BF9C0D09742CB50E704E /* ExamBroWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3A1642054647C9561F5845A3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */; };
+		450494BE4FB27C7F73234D9E /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E826BB4E45C2657C066E231F /* MainViewController.swift */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
@@ -82,6 +83,7 @@
 		B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
 		CBA6DCBA93E8762EE7D4E44F /* ExamBroWidgetSnapshots.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExamBroWidgetSnapshots.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E07F27A2C374C8A809325213 /* WidgetCompat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetCompat.swift; sourceTree = "<group>"; };
+		E826BB4E45C2657C066E231F /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
@@ -174,6 +176,7 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 				B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */,
 				26AC66AFC45480A182858F05 /* App.entitlements */,
+				E826BB4E45C2657C066E231F /* MainViewController.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -372,6 +375,7 @@
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				C50BB3B2BCC72EAD2C33D705 /* WidgetBridge.swift in Sources */,
+				450494BE4FB27C7F73234D9E /* MainViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

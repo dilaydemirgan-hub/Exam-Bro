@@ -127,8 +127,10 @@ end
 
 # WidgetBridge.swift ANA UYGULAMAYA (widget'a değil).
 app_group_node = project.main_group.groups.find { |g| g.display_name == 'App' }
-ensure_file(project, app_group_node, 'WidgetBridge.swift', app)
-log.call('App ← WidgetBridge.swift')
+%w[WidgetBridge.swift MainViewController.swift].each do |f|
+  ensure_file(project, app_group_node, f, app)
+  log.call("App ← #{f}")
+end
 app_group_node.files.find { |f| f.display_name == 'App.entitlements' } ||
   app_group_node.new_reference('App.entitlements')
 
