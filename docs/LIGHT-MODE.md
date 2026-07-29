@@ -110,7 +110,7 @@ kaldırıldı (özellik kalıtsal).
 | `--blue` | `#5c9bff` | `#2563eb` |
 | `--amber` | `#ffb703` | `#976801` |
 | `--on-green` / `--on-gold` | `#04120c` / `#1a1200` | `#fff` / `#fff` |
-| `--overlay-sheet` | `rgba(0,0,0,.7)` | `rgba(0,0,0,.35)` |
+| `--overlay-sheet` / `--overlay-modal` | `rgba(0,0,0,.7)` / `.72` | `rgba(0,0,0,.45)` |
 | `--shadow-card` | `none` | `0 1px 2px …05, 0 4px 12px …07` |
 
 Açık moddaki `green` / `amber` / `gold` / `orange` / `breath-text-2` **sayısal olarak
@@ -447,12 +447,10 @@ eşit ya da ondan iyi.** Öne çıkanlar:
 Koyu moddaki **üç** eksik (CTA, "Şimdi değil", danger butonu) mevcut borç —
 koyu mod referans, dokunulmadı. **Açık modda üçü de geçiyor.**
 
-> ⚠️ **Overlay yüzeyi ↔ perde sınırı iki modda da 3:1'in altında.**
-> Kart/sheet yüzeyi perdeden: koyu **1.08 / 1.11**, açık **2.67**. 1px `--border`
-> ile: koyu 1.36, açık 1.84 — yani **açık modda sınırı kenarlık değil yüzeyin
-> kendisi taşıyor** (perde orta gri, beyaz ondan uzak; açık gri kenarlık yakın).
-> Açık mod koyu modun ~2 katı, yani kabul ölçütü (§9) tutuyor. Yine de 3'ün
-> altında; **çözülebilir ama palet kararına dokunuyor** → §13'te açık konu.
+> ⚠️ **Overlay yüzeyi ↔ perde** ilk ölçümde iki modda da 3:1'in altındaydı
+> (koyu 1.08/1.11, açık 2.67). Palet kararına dokunduğu için kullanıcıya soruldu;
+> açık mod perdesi **%35 → %45** yapıldı → açık **3.68 ✓** (en kötü hal 3.36 ✓).
+> Koyu mod 1.36 ile mevcut borç olarak duruyor. Detay ve alfa hesabı §13.
 
 ### Kalan gruplar
 
@@ -479,8 +477,18 @@ maddeleri.
   | geçici pencerede `transition` | `background-color .18s, color .18s` ✓ | aynı ✓ |
   | sonrasında hâlâ etkileşimli | "Şimdi değil" kapatıyor ✓ | — |
 - Kontrol listesini (`~/Downloads/exambro-acik-mod-widget-komutu.md`, Faz 3) madde madde geç.
-- `public/manifest.json`'daki `#080810` **hâlâ dokunulmadı** (PWA/Android) — Faz 3 sonunda
-  kullanıcıyla konuşulacak.
+- `public/manifest.json`'daki `#080810` ✅ **karar verildi: değişmiyor.**
+
+  > **Gerekçe (kullanıcı kararı).** `background_color` ve `theme_color` tek bir
+  > statik değer alır — manifest'te media query yok, yani "moda göre" yapılamıyor.
+  > Varsayılan tema **koyu** olduğu için koyu değer çoğunluk durumla eşleşir;
+  > açığa çevirmek koyu kullanıcılarda açık splash flaşı yaratırdı (mevcut
+  > durumun tersi).
+  >
+  > **Etki alanı zaten dar:** App Store'daki iOS sürümü ve Capacitor Android
+  > bu dosyayı splash için kullanmıyor; **çalışan PWA'da da `index.html`'deki
+  > dinamik `theme-color` meta'sı manifest'i eziyor** (FOUC script'i `light`
+  > iken `#f2f2f6` yazıyor). Fark yalnızca PWA'nın **açılış splash'inde** görünür.
 - Koyu zemin için yapılmış PNG/görsel açık modda kötü duruyorsa bildir
   (`src/assets/hero.png`, `public/icon-*.png`).
 
@@ -760,13 +768,13 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | Konu | Durum |
 |---|---|
 | `color-mix` paritesi | ✅ WebKit 26.5'te doğrulandı. **Cihazda (gerçek iOS) kullanıcı ayrıca bakacak.** |
-| `manifest.json` `#080810` | ⬜ dokunulmadı, Faz 3 sonunda konuşulacak |
+| `manifest.json` `#080810` | ✅ **karar: olduğu gibi kalıyor** (kullanıcı). Gerekçe §13'te |
 | `--r-xl`, `--pink` gibi kullanılmayan token'lar | `--r-xl` önceden de kullanılmıyordu; zararsız |
 | Lint uyarısı `'Icon' is defined but never used` | Önceden mevcut, `main`'de de var |
 | **`.pressable` + `.themed` çakışması** | ✅ **çözüldü** — geçici `html.theme-anim` sınıfı (§8 Q). Ölçüm aşağıda |
 | **W — lejant ↔ ısı haritası görsel dili** | ✅ **çözüldü** — A seçeneği, `anxLegend()` (§4) |
 | **Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden KISA** | ⬜ **Faz 3 bittikten SONRA, ayrı `fix:` commit'i.** Gerçek bug ama renkle ilgisi yok; düzeltmek koyu modun render'ını da değiştireceği için rapor ekranının piksel referansı yeniden alınmalı. Detay §4 |
-| **Overlay yüzeyi ↔ perde 3:1'in altında (iki modda da)** | ⬜ **Karar kullanıcıya soruldu.** Koyu 1.08/1.11, açık 2.67 — açık mod ~2 kat iyi, kabul ölçütü tutuyor ama 1.4.11'in altında. Detay ve çözüm hesabı aşağıda |
+| **Overlay yüzeyi ↔ perde** | ✅ **çözüldü** — açık mod perdesi %35 → **%45** (kullanıcı kararı). Açık mod 2.43 → **3.68** (en kötü hal 3.36) ✓. Koyu mod 1.36 ile mevcut borç, dokunulmadı. Detay aşağıda |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
 
 ### Overlay yüzeyi ↔ perde — ölçüm ve çözüm hesabı
@@ -802,12 +810,28 @@ Yani eşiği **her yerde** geçmek için **α ≥ 0.42**; pay bırakmak için **
 en kötü hal olan 2.43 değil. Örnekleme noktası kartın üstündeki başlık şeridine
 denk geliyor.)
 
-0.45 hâlâ koyu modun 0.72'sinin çok altında, yani "açık modda daha düşük opaklık"
-niyeti korunur ve **koyu mod hiç değişmez** (ayrı token değeri).
+### ✅ Karar: açık mod perdesi %45
 
-**Uygulanmadı:** %35 Faz 2'de verilmiş bir palet kararı ve perdenin koyuluğu
-görsel bir tercih. Ayrıca §9'un kabul ölçütü (*açık mod ≥ koyu mod*) 2.67 ile
-zaten tutuyor. **Kullanıcıya soruldu.**
+%35 Faz 2'de verilmiş bir palet kararı olduğu için kendiliğinden değiştirilmedi,
+**kullanıcıya soruldu** — pay bırakan seçenek olan **%45** seçildi. Uygulandı:
+
+| | Önce (%35) | **Sonra (%45)** | Koyu (referans) |
+|---|---|---|---|
+| kart/sheet yüzeyi ↔ perde (ölçülen) | 2.67 ✗ | **3.68 ✓** | 1.08 / 1.11 ✗ |
+| en kötü hal (beyaz kart arkada) | 2.43 ✗ | **3.36 ✓** | — |
+| kenarlık ↔ perde | 1.84 ✗ | 2.53 ✗ | 1.36 / 1.35 ✗ |
+
+**Koyu mod değişmedi** — ayrı token değeri, 14 ekranda piksel farkı 0.
+%45 hâlâ koyu modun %72'sinin çok altında, "açık modda daha düşük opaklık"
+niyeti korundu.
+
+⚠️ **Sınırı kenarlık değil yüzeyin kendisi taşıyor.** `--border` (`#d5d5e0`)
+perdeye beyazdan daha yakın olduğu için kenarlık satırı hâlâ 3'ün altında —
+bu bir eksik değil, rapor çubuklarının (§4) **tersi** bir durum: orada dolgu
+taşıyamadığı için kenarlık eklenmişti, burada yüzey zaten taşıyor. Kenarlığı
+koyulaştırmak ayrıca **koyu modu da değiştirirdi** (`--border` paylaşılıyor).
+`contrast-overlays.mjs` bu yüzden ikisinin **en iyisini** ayrı bir satırda
+("→ … SINIRI") raporluyor.
 
 ### W — lejant, ısı haritası ve seçili buton aynı dili konuşuyor mu? ✅
 

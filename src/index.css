@@ -205,8 +205,16 @@
   /* ── Sabit / yarı saydam katmanlar ── */
   --header-bg:     rgba(242,242,246,0.92);
   --nav-bg:        rgba(255,255,255,0.94);
-  --overlay-sheet: rgba(0,0,0,0.35);   /* açık modda daha düşük opaklık */
-  --overlay-modal: rgba(0,0,0,0.35);
+  /* Perde koyu moddakinden (0.72) belirgin daha açık, ama 0.35 DEĞİL: overlay
+     yüzeyi (beyaz kart) perdeden ayırt edilebilmeli (1.4.11 → 3:1). En kötü hal
+     perdenin BEYAZ bir kartın üstüne düştüğü yer — orada perde en açık kalıyor:
+       α=0.35 → #a6a6a6, kart ↔ perde 2.43:1 ✗
+       α=0.42 → #949494, 3.03:1 ✓  (eşiğin tam sınırı)
+       α=0.45 → #8c8c8c, 3.36:1 ✓  (pay bırakır)
+     Kenarlık bu işi taşıyamıyor: --border (#d5d5e0) perdeye beyazdan DAHA
+     YAKIN, yani sınırı yüzeyin kendisi taşıyor (docs/LIGHT-MODE.md §13). */
+  --overlay-sheet: rgba(0,0,0,0.45);
+  --overlay-modal: rgba(0,0,0,0.45);
   --overlay-boom:  rgba(246,246,249,0.86);
 
   /* ── Text ── */

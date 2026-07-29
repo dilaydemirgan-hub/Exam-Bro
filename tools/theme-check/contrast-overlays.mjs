@@ -83,10 +83,16 @@ async function boundary(label, locator) {
   const border = parse(await locator.first().evaluate(e => getComputedStyle(e).borderTopColor));
   const { at } = await pixels(page);
   const veil = at(195, 40);   // yüzeyin ÜSTÜ: karartılmış + blur'lanmış sayfa
+  // Sınırı ikisinden HANGİSİ taşıyorsa o belirleyici: yeterli olması için
+  // birinin 3:1'i geçmesi yeter (rapor çubuklarındaki mantık, §4).
+  const rs = cr(surf, veil), rb = cr(border, veil);
+  const mark = r => (r === Math.max(rs, rb) ? "   ← sınırı bu taşıyor" : "");
   console.log(`   ${`${label} yüzeyi ↔ perde`.padEnd(30)} ${"—".padEnd(10)} ${"3".padEnd(4)}` +
-              `${hex(surf)}/${hex(veil)} = ${fmt(cr(surf, veil), "large")}`);
+              `${hex(surf)}/${hex(veil)} = ${fmt(rs, "large")}${mark(rs)}`);
   console.log(`   ${`${label} KENARLIĞI ↔ perde`.padEnd(30)} ${"1px".padEnd(10)} ${"3".padEnd(4)}` +
-              `${hex(border)}/${hex(veil)} = ${fmt(cr(border, veil), "large")}   ← sınırı bu taşıyor`);
+              `${hex(border)}/${hex(veil)} = ${fmt(rb, "large")}${mark(rb)}`);
+  console.log(`   ${`→ ${label} SINIRI`.padEnd(30)} ${"—".padEnd(10)} ${"3".padEnd(4)}` +
+              `en iyisi = ${fmt(Math.max(rs, rb), "large")}`);
 }
 
 await boundary("kart", dlg);
