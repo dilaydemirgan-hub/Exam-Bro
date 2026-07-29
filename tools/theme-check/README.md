@@ -207,3 +207,20 @@ Farklı şeyler, ikisi de gerekli:
 - **`npm test`** (kökte, `src/ink.test.mjs`) — `ink()` sözleşmesi ve
   `src/ink.js` sabitlerinin `index.css` ile uyumu. Tarayıcı gerektirmez, hızlı.
 - **Bu klasör** — gerçek render. Tarayıcı gerektirir, yavaş, elle çalıştırılır.
+
+---
+
+## Widget paleti üreteci (Faz 5)
+
+```bash
+node gen-widget-theme.mjs           # ios/App/ExamBroWidget/WidgetTheme.swift üret
+node gen-widget-theme.mjs --check   # üretilmiş dosya güncel mi (çıkış 1 = bayat)
+```
+
+Swift tarafına palet **elle yazılmıyor**: `src/index.css` tek kaynak, betik onu
+14 token × 2 tema olarak Swift'e çeviriyor. `--check`, `npm test`'in `ink()`
+sabitleri için yaptığının aynısı — palet değişip Swift güncellenmezse yakalar.
+
+Düz hex olmayan bir token istenirse (örn. `rgba(...)`) betik **hata verip durur**;
+sessizce yanlış renk üretmez. `--track-line` koyu modda `transparent` →
+`Color.clear`.

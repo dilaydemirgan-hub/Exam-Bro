@@ -7,6 +7,11 @@
 // widget köprüsü bu değeri senkron okuyabilmeli ve tema tercihiyle (exambro_theme)
 // aynı yerde durması tutarlı. docs/LIGHT-MODE.md §12.
 
+import { registerPlugin, Capacitor } from "@capacitor/core";
+
+/** Native tarafı: ios/App/App/WidgetBridge.swift (@objc(WidgetBridgePlugin)). */
+const WidgetBridge = registerPlugin("WidgetBridge");
+
 export const WIDGET_KEY = "xb_widget_exams";
 /** Small/Medium widget iki sınavdan fazlasını okunur biçimde gösteremiyor. */
 export const WIDGET_MAX = 2;
@@ -43,21 +48,37 @@ export function defaultWidgetIds(exams) {
 }
 
 /**
- * ⚠️ FAZ 5 BAĞLANTI NOKTASI — gövdesi BİLEREK boş.
+ * Seçimi native köprüye gönderir: App Group'a yazılır + widget timeline'ları
+ * yeniden yüklenir. Native tarafı `ios/App/App/WidgetBridge.swift`.
  *
- * Buraya gelecek olan:
- *   1. App Group'a (`group.com.exambroapp.sinav`) `payload`'ı JSON yaz.
- *   2. `WidgetCenter.shared.reloadAllTimelines()` çağır.
+ * ⚠️ **`@capacitor/preferences` bu iş için KULLANILAMAZ.** Kurulu sürümün
+ * (8.0.1) kaynağına bakıldı: `Preferences.swift` her zaman
+ * `UserDefaults.standard` kullanıyor ve plugin'in `group` seçeneği bir App
+ * Group değil, yalnızca anahtar ÖNEKİ. Yani Preferences'la yazılan veri
+ * paylaşılan konteynere girmiyor, widget okuyamıyor.
  *
  * `payload` şeması docs/LIGHT-MODE.md §11'deki köprü sözleşmesiyle aynı:
- *   { theme: "dark"|"light",            // ÇÖZÜLMÜŞ değer, asla "system"
+ *   { theme: "dark"|"light",             // ÇÖZÜLMÜŞ değer, asla "system"
  *     exams: [{ id, name, date, color }] // en fazla WIDGET_MAX
  *     updatedAt: ISO }
  *
- * Çağrı yerleri ZATEN bağlı (App.jsx): widget seçimi değişince, sınav
- * eklenince/silinince ve tema değişince. Faz 5'te yalnızca bu gövdeyi
- * doldurmak yeterli olmalı — App.jsx'e dokunmaya gerek kalmamalı.
+ * Hata YUTULUR: widget target'ı henüz eklenmemişken ya da App Group hakkı
+ * yokken uygulamanın çalışmaya devam etmesi gerekiyor. Teşhis için konsola
+ * bir kez uyarı basılır.
  */
-export function syncToWidget(_payload) {
-  // Faz 5'te doldurulacak.
+let warned = false;
+
+export async function syncToWidget(payload) {
+  if (!Capacitor?.isNativePlatform?.()) return;   // web/PWA'da widget yok
+  try {
+    // Savunma amaçlı: köprüye "system" ASLA gitmemeli. Çağıran zaten çözülmüş
+    // değeri veriyor (App.jsx → useTheme().theme), burada bir kez daha sabitliyoruz.
+    const theme = payload?.theme === "light" ? "light" : "dark";
+    await WidgetBridge.sync({ json: JSON.stringify({ ...payload, theme }) });
+  } catch (err) {
+    if (!warned) {
+      warned = true;
+      console.warn("[widget] köprü çağrılamadı — widget güncellenmedi:", err?.message || err);
+    }
+  }
 }

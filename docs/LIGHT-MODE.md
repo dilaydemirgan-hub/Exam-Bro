@@ -21,7 +21,7 @@
 | 2 | Açık mod paleti | ✅ `42f84dc` |
 | 3 | Eksiksiz uygulama | ✅ 7 grup + kapanış maddeleri |
 | 4 | Rapor sekmesine "Görünüm" seçici | ✅ |
-| 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
+| 5 | iOS widget'ları | 🔄 Aşama 1 (keşif+hazırlık) ✅ · Aşama 2 Xcode adımlarını bekliyor |
 | 6 | Uygulama içinden widget sınavı seçme | 🔄 arayüz ✅, köprü Faz 5'te |
 | 7 | Doğrulama | ⬜ başlamadı |
 
@@ -862,10 +862,98 @@ Haptic: mevcut `tap()` kullanıldı, yenisi yazılmadı.
 - `widgetURL` ile deep link; placeholder ve snapshot görünümleri de doldurulacak.
 - **Android widget'ı ayrı konuşulacak** — önce iOS bitecek.
 
-### ⚠️ Xcode'da elle yapılacak adımlar
-Target ekleme, App Group capability, signing — bunlar **uydurulmayacak**. Emin olunmayan
-her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açacak; adımlar
-"hangi ekran, hangi buton" düzeyinde yazılacak.
+### Aşama 1 — keşif + hazırlık ✅ (Xcode'a dokunulmadı)
+
+#### K1. `@capacitor/preferences` App Group'a YAZAMAZ — kısayol yok
+
+Kurulu **8.0.1**'in kaynağına bakıldı (`node_modules/@capacitor/preferences/ios/Sources/`):
+
+```swift
+// Preferences.swift
+private var defaults: UserDefaults { return UserDefaults.standard }   // ← sabit
+private var prefix: String {                                          // ← group SADECE önek
+    case let .named(group): return group + "."
+}
+```
+
+`PreferencesConfiguration.Group` bir **App Group değil, anahtar ÖNEKİ**
+(`applyPrefix(to:)` ile `CapacitorStorage.` gibi). `UserDefaults(suiteName:)`
+plugin'in **hiçbir yerinde geçmiyor**; TS dokümantasyonu da "groups are used to
+**organize** key/value pairs" diyor. **Sonuç: Preferences ile yazılan veri
+paylaşılan konteynere girmez, widget extension okuyamaz.**
+
+Yani "sadece `reloadAllTimelines()` için minik bir köprü" **yetmiyor** — yazma da
+köprüde olmak zorunda. İkisi tek plugin'de: **`ios/App/App/WidgetBridge.swift`**
+(`@objc(WidgetBridgePlugin)`, `jsName = "WidgetBridge"`, tek metot `sync`).
+JS tarafı `src/widget.js` → `registerPlugin("WidgetBridge")`.
+
+> Köprü, App Group hakkını `FileManager.containerURL(forSecurityApplicationGroupIdentifier:)`
+> ile kontrol ediyor — `UserDefaults(suiteName:)` hak yokken de nil DÖNMEYEBİLİR
+> (yazar ama paylaşmaz, sessiz başarısızlık). Konteyner URL'si hak yoksa nil döner,
+> o yüzden teşhis ondan alınıyor ve hata mesajı üç olası sebebi sayıyor.
+
+#### K2. Sürüm senkronu — kurulu
+
+**`ios/App/Version.xcconfig`** tek kaynak (`MARKETING_VERSION = 1.3.0`,
+`CURRENT_PROJECT_VERSION = 7`). Her iki target da base configuration olarak bunu
+kullanacak; ikisi de aynı dosyaya eşit olunca **birbirlerine de eşit** olur.
+
+**`ios/App/Scripts/check-version-sync.sh`** — her iki target'ta Run Script phase.
+Üç şeyi ayrı ayrı yakalar ve `error:` ile build'i durdurur:
+
+| Kontrol | Yakaladığı hata |
+|---|---|
+| `XB_VERSION_SOURCE` sentinel | xcconfig base configuration olarak **hiç bağlanmamış** |
+| `MARKETING_VERSION` ≠ dosya | Xcode **General sekmesinden** sürüm yazılmış, target ayarı xcconfig'i eziyor |
+| `CURRENT_PROJECT_VERSION` ≠ dosya | aynısı, build numarası için |
+
+> Asıl tuzak sentinel'siz yakalanmıyordu: General'den sürüm değiştirmek target
+> build setting'i yazar ve `.xcconfig`'i **sessizce** ezer; iki target ayrışır ve
+> hata ancak App Store Connect yüklemesinde görülür. Betik üç senaryoda da
+> denendi (doğru / bağlı değil / ezilmiş), üçünde de beklendiği gibi davrandı.
+
+#### K3. iOS 17 `containerBackground` — koşullu, tek sürüme yazılmadı
+
+**`ios/App/ExamBroWidget/WidgetCompat.swift`** → `View.widgetContainerBackground(_:)`
+`#available(iOSApplicationExtension 17.0, *)` ile iOS 17+'da
+`containerBackground(_:for:.widget)`, iOS 15/16'da `background(_:)`.
+iOS 17'de sistem zemini kendi çizer ve `.background(...)` **yok sayılır**;
+çağrılmazsa widget iOS 17+'da yanlış zeminle çıkar.
+
+> ⚠️ `contentMarginsDisabled()` için sarmalayıcı **bilerek yazılmadı**:
+> `WidgetConfiguration` uzantısında `some WidgetConfiguration` döndüren yardımcı
+> **derlenmez** — `#available` dallarının iki farklı somut tipi olur, opaque dönüş
+> tek tip ister ve `@ViewBuilder`ın View'lar için yaptığı tip silme burada yok
+> (public `AnyWidgetConfiguration` da yok). **Karar:** iOS 17 varsayılan kenar
+> boşlukları kabul edildi, tasarım onlara göre yapılacak.
+
+#### K4. Palet tek kaynaktan üretiliyor
+
+**`tools/theme-check/gen-widget-theme.mjs`** → `ios/App/ExamBroWidget/WidgetTheme.swift`.
+14 token × 2 tema, doğrudan `src/index.css`'ten. Üretilen dosya commit'li ve başında
+"ÜRETİLMİŞTİR — ELLE DÜZENLEMEYİN" uyarısı var.
+
+```bash
+node tools/theme-check/gen-widget-theme.mjs           # üret
+node tools/theme-check/gen-widget-theme.mjs --check    # bayat mı (çıkış 1)
+```
+
+`--check`, `src/ink.test.mjs`'in ink sabitleri için yaptığının aynısı: palet
+değişip Swift güncellenmezse yakalar. Düz hex olmayan bir token istenirse
+(örn. `rgba(...)`) betik **hata verip durur** — sessizce yanlış renk üretmez.
+`--track-line` koyu modda `transparent` → `Color.clear` olarak çevriliyor.
+
+#### K5. `syncToWidget()` gövdesi yazıldı
+
+`src/widget.js`. Web/PWA'da erken döner. **`theme` alanı savunma amaçlı bir kez
+daha sabitleniyor** — `"light"` değilse `"dark"`, yani köprüye **asla `"system"`
+gitmez**. Hata yutuluyor (widget target'ı yokken uygulama çalışmaya devam etmeli),
+konsola bir kez uyarı basılıyor.
+
+### ⚠️ Aşama 2 — Xcode'da elle yapılacak adımlar
+Target ekleme, App Group capability, signing — bunlar **uydurulmadı**. Emin
+olunmayan noktalar rapor içinde **açıkça işaretlendi**. Adım listesi kullanıcıya
+"hangi ekran, hangi buton" düzeyinde ayrıca verildi.
 
 ---
 
