@@ -7,7 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0B1A47162D0A5EA78ABC10FD /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5256C49411FB3A3EC3B2EA21 /* WidgetTheme.swift */; };
+		283C9AD299C72176588A4745 /* WidgetCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07F27A2C374C8A809325213 /* WidgetCompat.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		3526BF9C0D09742CB50E704E /* ExamBroWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3A1642054647C9561F5845A3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
@@ -15,10 +19,40 @@
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		67945E0B772E58A1AAAA5ED8 /* ExamBroWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */; };
+		735928B69F2E1BC5E5E39ACF /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A62BDB2138799682C73AC0 /* SharedStore.swift */; };
+		C50BB3B2BCC72EAD2C33D705 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		94FE4D5A55520547D502C7BA /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 53A49E8B83BB6C6E1C005C30;
+			remoteInfo = ExamBroWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		17636A884AE8863CD4C79608 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3526BF9C0D09742CB50E704E /* ExamBroWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ExamBroWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		26AC66AFC45480A182858F05 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExamBroWidgetBundle.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -27,10 +61,26 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
+		5256C49411FB3A3EC3B2EA21 /* WidgetTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
+		60A62BDB2138799682C73AC0 /* SharedStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedStore.swift; sourceTree = "<group>"; };
+		6FF19E05C2F0A8949BCE01E5 /* ExamBroWidget.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = ExamBroWidget.entitlements; sourceTree = "<group>"; };
+		8407F4850A8E75F743ACEDD2 /* Version.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		97B17C9EF6A4423DF5800716 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
+		E07F27A2C374C8A809325213 /* WidgetCompat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetCompat.swift; sourceTree = "<group>"; };
+		F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		27B5DDF84F30499D330B06CA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A1642054647C9561F5845A3 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -42,12 +92,30 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3B1B460E4E944CD42806B35A /* ExamBroWidget */ = {
+			isa = PBXGroup;
+			children = (
+				0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */,
+				4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */,
+				60A62BDB2138799682C73AC0 /* SharedStore.swift */,
+				5256C49411FB3A3EC3B2EA21 /* WidgetTheme.swift */,
+				E07F27A2C374C8A809325213 /* WidgetCompat.swift */,
+				97B17C9EF6A4423DF5800716 /* Info.plist */,
+				6FF19E05C2F0A8949BCE01E5 /* ExamBroWidget.entitlements */,
+			);
+			name = ExamBroWidget;
+			path = ExamBroWidget;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				8407F4850A8E75F743ACEDD2 /* Version.xcconfig */,
+				3B1B460E4E944CD42806B35A /* ExamBroWidget */,
+				BFC08E8B69FCCBA77A16C4EE /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -70,8 +138,26 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */,
+				26AC66AFC45480A182858F05 /* App.entitlements */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		BFC08E8B69FCCBA77A16C4EE /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CABDEF57ACE09632128D3375 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CABDEF57ACE09632128D3375 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */,
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -81,13 +167,16 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
 			buildPhases = (
+				0142DB94C83EF46FB1914AED /* Sürüm senkronu (check-version-sync.sh) */,
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				17636A884AE8863CD4C79608 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				B03EAF76C0731514840D8BB1 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -96,6 +185,24 @@
 			productName = App;
 			productReference = 504EC3041FED79650016851F /* App.app */;
 			productType = "com.apple.product-type.application";
+		};
+		53A49E8B83BB6C6E1C005C30 /* ExamBroWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1F5FFC7DF9C6CC3D84D851EC /* Build configuration list for PBXNativeTarget "ExamBroWidget" */;
+			buildPhases = (
+				CCEBC842E3F59ED35BC60BAF /* Sürüm senkronu (check-version-sync.sh) */,
+				6BBB8F2D8C38B47DBB8502B7 /* Sources */,
+				27B5DDF84F30499D330B06CA /* Frameworks */,
+				F1F804CF9CC8B24D8920C771 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ExamBroWidget;
+			productName = ExamBroWidget;
+			productReference = 0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -130,6 +237,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				53A49E8B83BB6C6E1C005C30 /* ExamBroWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -148,7 +256,55 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F1F804CF9CC8B24D8920C771 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0142DB94C83EF46FB1914AED /* Sürüm senkronu (check-version-sync.sh) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Sürüm senkronu (check-version-sync.sh)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"$SRCROOT/Scripts/check-version-sync.sh\" ]; then\n  \"$SRCROOT/Scripts/check-version-sync.sh\"\nelse\n  echo \"error: Scripts/check-version-sync.sh bulunamadı\"; exit 1\nfi\n";
+		};
+		CCEBC842E3F59ED35BC60BAF /* Sürüm senkronu (check-version-sync.sh) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Sürüm senkronu (check-version-sync.sh)";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -f \"$SRCROOT/Scripts/check-version-sync.sh\" ]; then\n  \"$SRCROOT/Scripts/check-version-sync.sh\"\nelse\n  echo \"error: Scripts/check-version-sync.sh bulunamadı\"; exit 1\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		504EC3001FED79650016851F /* Sources */ = {
@@ -156,10 +312,31 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				C50BB3B2BCC72EAD2C33D705 /* WidgetBridge.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6BBB8F2D8C38B47DBB8502B7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				67945E0B772E58A1AAAA5ED8 /* ExamBroWidgetBundle.swift in Sources */,
+				735928B69F2E1BC5E5E39ACF /* SharedStore.swift in Sources */,
+				0B1A47162D0A5EA78ABC10FD /* WidgetTheme.swift in Sources */,
+				283C9AD299C72176588A4745 /* WidgetCompat.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B03EAF76C0731514840D8BB1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = ExamBroWidget;
+			target = 53A49E8B83BB6C6E1C005C30 /* ExamBroWidget */;
+			targetProxy = 94FE4D5A55520547D502C7BA /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -181,9 +358,36 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		3D67C3DA2A34ECD7FE05DF60 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8407F4850A8E75F743ACEDD2 /* Version.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ExamBroWidget/ExamBroWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8643ZVLPJ5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ExamBroWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.exambroapp.sinav.ExamBroWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
+			baseConfigurationReference = 8407F4850A8E75F743ACEDD2 /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -241,6 +445,7 @@
 		};
 		504EC3151FED79650016851F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8407F4850A8E75F743ACEDD2 /* Version.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -295,8 +500,8 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 8643ZVLPJ5;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Exam Bro";
@@ -305,7 +510,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.exambroapp.sinav;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -323,8 +527,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 8643ZVLPJ5;
 				INFOPLIST_FILE = App/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Exam Bro";
@@ -333,7 +537,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.exambroapp.sinav;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -346,9 +549,44 @@
 			};
 			name = Release;
 		};
+		5A7F7FFAE243A48F03AE0CB8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8407F4850A8E75F743ACEDD2 /* Version.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = ExamBroWidget/ExamBroWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8643ZVLPJ5;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ExamBroWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.exambroapp.sinav.ExamBroWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1F5FFC7DF9C6CC3D84D851EC /* Build configuration list for PBXNativeTarget "ExamBroWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3D67C3DA2A34ECD7FE05DF60 /* Release */,
+				5A7F7FFAE243A48F03AE0CB8 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
