@@ -492,6 +492,51 @@ maddeleri.
 - Koyu zemin için yapılmış PNG/görsel açık modda kötü duruyorsa bildir
   (`src/assets/hero.png`, `public/icon-*.png`).
 
+### Faz 3 kontrol listesi — madde madde (kaynak: `~/Downloads/exambro-acik-mod-widget-komutu.md`)
+
+| # | Madde | Durum | Nerede / kanıt |
+|---|---|---|---|
+| 1 | Splash / açılış ekranı | ✅ | Tamamen token (`--bg`, `--violet`, `--text-1`, `--glow-logo`). Web'de **tek kareden kısa** sürüyor (`store.get` → `localStorage` tek mikro-görevde dönüyor), ekran görüntüsüyle yakalanamıyor — denendi, hep `fadein`'deki `Onboard` geliyor. Doğrulama **kod incelemesi + ilk boyama ölçümü**: `capture-boot.mjs` React mount ÖNCESİ `data-theme=light` ve `theme-color=#f2f2f6` olduğunu gösteriyor. Cihazda açılışı zaten native splash kaplıyor |
+| 2 | Giriş / onboarding adımlarının hepsi | ✅ | `Onboard` (tek adım, başka adım yok). `capture-boot.mjs` ölçtü: açık modda **4/4 metin AA** (4.64–19.36). Koyu modda iki `--text-4` satırı 3.39 ✗ — mevcut borç |
+| 3 | Ana sayaç ekranı | ✅ | Grup 2 |
+| 4 | Sınav ekleme / seçme, date picker | ✅ | Grup 3; picker görünümü `color-scheme`'den kalıtıyor (§4) |
+| 5 | Rapor sekmesi (grafikler dahil) | ✅ | Grup 5 + §4 "Rapor grafikleri" |
+| 6 | Ayarlar ekranı ve alt sayfaları | ✅ | Grup 5 — Rapor içindeki ayarlar kartı. **Alt sayfa yok** |
+| 7 | Alt menü (nav) | ✅ | Grup 1 |
+| 8 | Üst bar / başlık | ✅ | Grup 1 |
+| 9 | Modal / bottom sheet / popover / dropdown | ✅ | Grup 7. **Popover ve dropdown bu uygulamada yok** |
+| 10 | Butonlar: birincil / ikincil / ghost / tehlike / **disabled** | ✅ | Birincil (`--grad-brand-135`, paywall CTA), ikincil (kenarlıklı "geri yükle"), ghost ("Şimdi değil"), tehlike (`--danger`, onay sheet'i 5.30 ✓), disabled (grup 3'te "Sınav Ekle", grup 7'de `purchasing` → `opacity .6`) |
+| 11 | Form: input / textarea / select / checkbox / radio / switch | ✅ | input (grup 3, `.themed`), checkbox (grup 4), radio (kaygı skalası, grup 4), switch (grup 5, toggle 4.93 ✓). **textarea ve select uygulamada yok.** Odak: `:focus-visible` → `--violet` (token). Placeholder → `--text-4` (token) |
+| 12 | Toast / bildirim / uyarı | ✅ | Grup 7 — toast metni 17.82 ✓ |
+| 13 | Boş durumlar | ✅ | İki `EmptyState`: "Henüz sayaç yok", "Henüz hedef yok". Açık modda çekildi ve doğrulandı |
+| 14 | Yükleniyor / skeleton / spinner | **N/A** | Yok — yükleme durumu yalnızca `Splash` |
+| 15 | Hata ekranları | **N/A** | Yok |
+| 16 | Scrollbar rengi | **N/A** | `::-webkit-scrollbar { width: 0 }` — tamamen gizli |
+| 17 | Seçim (text selection) rengi | ✅ | `::selection` → `--selection-bg` + `--text-1` (grup 1) |
+| 18 | `theme-color` dinamik | ✅ | `index.html` inline script + `applyTheme()`. **Ölçüldü:** ilk boyamada açık modda `#f2f2f6` |
+| 19 | iOS status bar senkron | ✅ | Grup 1, `applyStatusBar()` + `visibilitychange` (§8 R) |
+| 20 | Safe area / notch zemini | ✅ | `S.root` / `S.nav` zeminlerinden geliyor, ikisi de token + `.themed` (grup 1) |
+| 21 | SVG ikonlar `currentColor` | **N/A** | `src/icons.jsx` zaten tamamen `currentColor`; sabit renkli SVG yok |
+| 22 | Koyu için yapılmış PNG/görsel | ⚠️ | **Bildirim aşağıda** |
+| — | Geçiş anlık, sayfa yenilenmiyor | ✅ | `data-theme` attribute değişimi; `theme-transition.mjs` |
+| — | 150–200ms `transition`, sayaç animasyonu bozulmuyor | ✅ | §8 Q — 180ms, muaf liste `.no-theme-anim` |
+| — | `prefers-reduced-motion`'da geçiş kapalı | ✅ | `theme-transition.mjs` (d): sınıf **hiç eklenmiyor** |
+
+**Eksik madde yok.** N/A olanlar: 14, 15, 16, 21 (ve 9/11 içindeki popover, dropdown,
+textarea, select — bileşen uygulamada yok).
+
+#### 22 — görseller hakkında bildirim
+
+- `src/assets/hero.png`, `react.svg`, `vite.svg` → **hiçbir yerden referans verilmiyor**
+  (ölü dosyalar). Açık mod açısından sorun değil; istenirse ayrı bir temizlik commit'i.
+- `public/icon-192.png` / `icon-512.png` → PWA kurulum ikonları. Koyu zeminli, ama bunlar
+  **işletim sisteminin ana ekranında** görünüyor, uygulamanın açık zemininde değil —
+  sabit marka varlığı, temayla değişmesi beklenmez. **Açık modda bir sorun yaratmıyor.**
+- ⚠️ **Ayrı bir kusur (açık modla ilgisi yok):** `icon-512.png`'nin ortasında amaçlanan
+  simge yerine **eksik glif kutusu (tofu)** var — ikon üretilirken bir emoji
+  render edilememiş. Önceden mevcut; App Store'daki iOS ikonu ayrı dosya, etkilenmiyor.
+  Düzeltmek ikon yeniden üretmek demek, bu çalışmanın kapsamı dışında — **karar sizin.**
+
 ### Bu projede **N/A** olan kontrol listesi maddeleri
 - **Scrollbar rengi** → `::-webkit-scrollbar { width: 0 }`, tamamen gizli.
 - **Hata ekranı** → yok.
@@ -689,7 +734,38 @@ Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ö
   → yalnızca **veri renkleri** (`FIXED`/`OSYM`/`c:"#ffbe0b"`/`PSYCH_COLORS`) ve
   `rgba(var(--anx-*-rgb), …)` kalmalı. `src/ink.js` ve `src/ink.test.mjs` içindeki
   hex'ler de meşru (mürekkep sabiti ve test verisi).
-- 56 metin/zemin çiftinin tamamı AA (Faz 7'de tabloyu yeniden üret).
+- Metin/zemin çiftleri: **`node contrast-sweep.mjs <dark|light>`** üretiyor.
+
+  > ⚠️ **"56 çiftin TAMAMI AA" ifadesi yanlıştı, düzeltildi.** O sayı elle
+  > tutulmuş bir listeydi ve hiçbir betik üretmiyordu. Süpürme (14 ekranın
+  > her metin düğümü, renk+zemin+kova ile tekilleştirilmiş) gerçek tabloyu veriyor:
+  >
+  > | | Açık | Koyu |
+  > |---|---|---|
+  > | benzersiz çift | 62 | 72 |
+  > | AA'yı geçen | **60/62** | 57/72 |
+  >
+  > **Açık modda kalan 2 çift, koyu modda AYNI YERDE daha kötü** — yani açık moda
+  > özgü regresyon yok:
+  >
+  > | Yer | Açık | Koyu |
+  > |---|---|---|
+  > | `ExamsTab` sınav tarihi (11.5px `--text-4`, tint'li kart) | 4.29 / 4.47 ✗ | 3.29 / 3.31 ✗ |
+  >
+  > `--text-4` `index.css`'te **"ipucu / meta — yalnızca dekoratif"** olarak
+  > tanımlı ve açık modda her yerde geçiyor (beyaz kartta 5.18); yalnızca
+  > **tint yıkamalı sınav kartlarında** eşiğin bir tık altına düşüyor.
+  > **Tek dokunuşluk çözüm var:** `--text-4` açık modda `#6b6b82` → **`#67677d`**
+  > (%4 koyu) → tint'li kartta **4.56 ✓**, beyazda 5.51 ✓, koyu mod etkilenmez.
+  > Palet kararı olduğu için **uygulanmadı, kullanıcıya soruldu.**
+  >
+  > Süpürmenin **kapsam sınırı** çıktıda açıkça yazılıyor: katlamanın altındaki
+  > öğeler o ekranda ölçülmüyor (kaydırma adımı gerekir), overlay'in ardında
+  > kalanlar da ölçülmüyor (kendi ekranlarında ölçülüyorlar).
+  >
+  > Gradyan zeminlerde süpürme **baskın** rengi alır; **en kötü** noktayı alana
+  > özel betikler ölçer. Paywall CTA'da fark görünür: süpürme 5.74, worst-of-5
+  > yapan `contrast-overlays.mjs` **4.76** — karar için ikincisi geçerli.
 - Yeni kurulum: `localStorage` temizle → uygulama **koyu** açılmalı.
 
 ---
