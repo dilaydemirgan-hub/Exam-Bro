@@ -8,7 +8,10 @@ struct WidgetExam: Decodable, Identifiable {
     let id: String
     let name: String
     let date: Date
-    /// "#RRGGBB" — sınav rengi VERİdir, palet token'ı değil (iki temada da aynı).
+    /// "#RRGGBB" — **görüntülenecek** renk. Ham veri rengi DEĞİL: uygulama
+    /// açık modda `ink()`'ten geçirip gönderiyor (ham `#10d99e` açık zeminde
+    /// 1.7:1, okunmuyor). Koyu modda ink() rengi aynen döndürdüğü için değer
+    /// veri rengiyle aynı olur. Tema değişince köprü yeniden yazıyor.
     let color: String?
 }
 

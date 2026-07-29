@@ -15,9 +15,14 @@ import WidgetKit
 extension View {
     /// Widget kökünün zeminini iki dünyada da doğru verir.
     /// iOS 17+: `containerBackground(_:for: .widget)` · iOS 15/16: `background(_:)`
+    /// ⚠️ Koşul `#available(iOS 17.0, *)` — `iOSApplicationExtension 17.0` DEĞİL.
+    /// İkincisi yalnızca extension target'ında availability'yi karşılıyor; aynı
+    /// dosya snapshot test target'ında (normal iOS bağlamı) derlenirken
+    /// "'containerBackground' is only available in iOS 17.0 or newer" hatası
+    /// veriyordu. `iOS 17.0` her iki bağlamda da doğru gate'liyor.
     @ViewBuilder
     func widgetContainerBackground(_ color: Color) -> some View {
-        if #available(iOSApplicationExtension 17.0, *) {
+        if #available(iOS 17.0, *) {
             self.containerBackground(color, for: .widget)
         } else {
             self.background(color)

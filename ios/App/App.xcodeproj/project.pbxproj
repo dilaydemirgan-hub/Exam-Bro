@@ -7,8 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		06618919899C78A720AF5F52 /* ExamCountdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA85485363EAA990D3A682E /* ExamCountdown.swift */; };
 		0B1A47162D0A5EA78ABC10FD /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5256C49411FB3A3EC3B2EA21 /* WidgetTheme.swift */; };
+		16DB81CB380A91F7521876CA /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A62BDB2138799682C73AC0 /* SharedStore.swift */; };
+		2140BEA2DD9E3E8E34471886 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5256C49411FB3A3EC3B2EA21 /* WidgetTheme.swift */; };
 		283C9AD299C72176588A4745 /* WidgetCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07F27A2C374C8A809325213 /* WidgetCompat.swift */; };
+		292A04EBA82ECC67CBCFC555 /* SnapshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27A616560904A438A94DB13D /* SnapshotTests.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		3526BF9C0D09742CB50E704E /* ExamBroWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3A1642054647C9561F5845A3 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */; };
@@ -22,8 +26,11 @@
 		67945E0B772E58A1AAAA5ED8 /* ExamBroWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */; };
 		735928B69F2E1BC5E5E39ACF /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A62BDB2138799682C73AC0 /* SharedStore.swift */; };
 		806225E5DD9041F8F6C78893 /* WidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587647D447E4A422F743A511 /* WidgetViews.swift */; };
+		897C4A55D6803A3506C8C245 /* WidgetCompat.swift in Sources */ = {isa = PBXBuildFile; fileRef = E07F27A2C374C8A809325213 /* WidgetCompat.swift */; };
 		9720CF6ADA225006DFFD109D /* ExamCountdown.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0EA85485363EAA990D3A682E /* ExamCountdown.swift */; };
+		9B7212E444C2379E526D632E /* WidgetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 587647D447E4A422F743A511 /* WidgetViews.swift */; };
 		C50BB3B2BCC72EAD2C33D705 /* WidgetBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */; };
+		D875D3735E3294C627094E13 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +61,7 @@
 		0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ExamBroWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0EA85485363EAA990D3A682E /* ExamCountdown.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExamCountdown.swift; sourceTree = "<group>"; };
 		26AC66AFC45480A182858F05 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		27A616560904A438A94DB13D /* SnapshotTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotTests.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		4BE082256D42E52C446C3B9B /* ExamBroWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExamBroWidgetBundle.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
@@ -72,6 +80,7 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		97B17C9EF6A4423DF5800716 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		B500B1C22B0CA002AC1D3D37 /* WidgetBridge.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetBridge.swift; sourceTree = "<group>"; };
+		CBA6DCBA93E8762EE7D4E44F /* ExamBroWidgetSnapshots.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ExamBroWidgetSnapshots.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E07F27A2C374C8A809325213 /* WidgetCompat.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetCompat.swift; sourceTree = "<group>"; };
 		F5CE4D69F051E3C2B0FD6DDB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
@@ -93,9 +102,27 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E645230163DD0A1396827ABA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D875D3735E3294C627094E13 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0DE0E33803FE09B82BA84C98 /* ExamBroWidgetSnapshots */ = {
+			isa = PBXGroup;
+			children = (
+				CBA6DCBA93E8762EE7D4E44F /* ExamBroWidgetSnapshots.xctest */,
+				27A616560904A438A94DB13D /* SnapshotTests.swift */,
+			);
+			name = ExamBroWidgetSnapshots;
+			path = ExamBroWidgetSnapshots;
+			sourceTree = "<group>";
+		};
 		3B1B460E4E944CD42806B35A /* ExamBroWidget */ = {
 			isa = PBXGroup;
 			children = (
@@ -122,6 +149,7 @@
 				8407F4850A8E75F743ACEDD2 /* Version.xcconfig */,
 				3B1B460E4E944CD42806B35A /* ExamBroWidget */,
 				BFC08E8B69FCCBA77A16C4EE /* Frameworks */,
+				0DE0E33803FE09B82BA84C98 /* ExamBroWidgetSnapshots */,
 			);
 			sourceTree = "<group>";
 		};
@@ -210,6 +238,23 @@
 			productReference = 0115692C1B1EDF39475DB751 /* ExamBroWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		D87EF96207CDF9272C2ED542 /* ExamBroWidgetSnapshots */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AAC8E50E44BFECA8C0E645B9 /* Build configuration list for PBXNativeTarget "ExamBroWidgetSnapshots" */;
+			buildPhases = (
+				79491DFCFA3DFDF812025732 /* Sources */,
+				E645230163DD0A1396827ABA /* Frameworks */,
+				61282AD0B32BAB7C9DB573CE /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ExamBroWidgetSnapshots;
+			productName = ExamBroWidgetSnapshots;
+			productReference = CBA6DCBA93E8762EE7D4E44F /* ExamBroWidgetSnapshots.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -244,6 +289,7 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				53A49E8B83BB6C6E1C005C30 /* ExamBroWidget */,
+				D87EF96207CDF9272C2ED542 /* ExamBroWidgetSnapshots */,
 			);
 		};
 /* End PBXProject section */
@@ -259,6 +305,13 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		61282AD0B32BAB7C9DB573CE /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -335,6 +388,19 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		79491DFCFA3DFDF812025732 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				292A04EBA82ECC67CBCFC555 /* SnapshotTests.swift in Sources */,
+				9B7212E444C2379E526D632E /* WidgetViews.swift in Sources */,
+				06618919899C78A720AF5F52 /* ExamCountdown.swift in Sources */,
+				16DB81CB380A91F7521876CA /* SharedStore.swift in Sources */,
+				2140BEA2DD9E3E8E34471886 /* WidgetTheme.swift in Sources */,
+				897C4A55D6803A3506C8C245 /* WidgetCompat.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -366,6 +432,22 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		2C4C303A6959FAC883F99856 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8643ZVLPJ5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.exambroapp.sinav.ExamBroWidgetSnapshots;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		3D67C3DA2A34ECD7FE05DF60 /* Release */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 8407F4850A8E75F743ACEDD2 /* Version.xcconfig */;
@@ -583,6 +665,23 @@
 			};
 			name = Debug;
 		};
+		679475ACBB0AD415E3DB64DB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 8643ZVLPJ5;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.exambroapp.sinav.ExamBroWidgetSnapshots;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -609,6 +708,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AAC8E50E44BFECA8C0E645B9 /* Build configuration list for PBXNativeTarget "ExamBroWidgetSnapshots" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				679475ACBB0AD415E3DB64DB /* Release */,
+				2C4C303A6959FAC883F99856 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

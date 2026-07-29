@@ -652,7 +652,12 @@ export default function App() {
       exams: widgetExams.map(ex => ({
         id: ex.id, name: ex.n,
         date: (examInfoFor(ex)?.date || new Date(ex.date)).toISOString(),
-        color: ex.c,
+        // GÖRÜNTÜLENECEK renk — ham veri rengi değil. Widget'ta bu renk METİN
+        // olarak kullanılıyor (sınav adı, "Bugün!"), ham hâliyle açık zeminde
+        // okunmuyor: #10d99e beyazımsı zeminde 1.7:1. ink() açık modda AA'yı
+        // geçen tona indiriyor, koyu modda rengi AYNEN döndürüyor (§6).
+        // Swift'e ink() portlanmadı — tek kaynak burada kalsın diye.
+        color: ink(ex.c, theme),
       })),
       updatedAt: new Date().toISOString(),
     });
