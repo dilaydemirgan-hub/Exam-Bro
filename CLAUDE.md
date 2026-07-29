@@ -1,7 +1,7 @@
 # Exam Bro
 
 Sınav geri sayımı, günlük hedefler ve kaygı takibi. **App Store'da canlı** (1.3.0 / build 7,
-`com.exambroapp.sinav`). Mevcut davranışı bozmak kabul edilemez.
+`com.exambroapp.sinav`). `feature/light-mode-widgets` dalı 1.4.0 / build 8'e hazırlanıyor. Mevcut davranışı bozmak kabul edilemez.
 
 Capacitor 8 + React 19 + Vite. Native: `ios/` (SPM, tek target `App`) ve `android/`.
 

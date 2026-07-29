@@ -7,7 +7,8 @@
 
 **Branch:** `feature/light-mode-widgets` — ana dal `master` **değil**, **`main`**.
 **Proje:** `~/Exam-Bro` — Capacitor 8, React 19, Vite. Bundle id `com.exambroapp.sinav`.
-**Uyarı:** Uygulama App Store'da canlı (1.3.0 / build 7). **Koyu mod referans, dokunulmaz.**
+**Uyarı:** App Store'daki canlı sürüm 1.3.0 / build 7. **Koyu mod referans, dokunulmaz.**
+**Bu dal:** 1.4.0 / build 8 (açık mod + widget'lar — minor bump, kullanıcı kararı).
 
 ---
 
@@ -894,8 +895,8 @@ JS tarafı `src/widget.js` → `registerPlugin("WidgetBridge")`.
 
 #### K2. Sürüm senkronu — kurulu
 
-**`ios/App/Version.xcconfig`** tek kaynak (`MARKETING_VERSION = 1.3.0`,
-`CURRENT_PROJECT_VERSION = 7`). Her iki target da base configuration olarak bunu
+**`ios/App/Version.xcconfig`** tek kaynak (`MARKETING_VERSION = 1.4.0`,
+`CURRENT_PROJECT_VERSION = 8`). Her iki target da base configuration olarak bunu
 kullanacak; ikisi de aynı dosyaya eşit olunca **birbirlerine de eşit** olur.
 
 **`ios/App/Scripts/check-version-sync.sh`** — her iki target'ta Run Script phase.
@@ -1342,7 +1343,7 @@ Tarih: dalın son hâli. Her satır **koşularak** doğrulandı, hiçbiri "herha
 | Temiz kurulum → koyu | ✅ cihaz açık modu tercih etse bile `data-theme=dark` |
 | "Sistem" + cihaz modu değişimi | ✅ uygulama **ve widget birlikte** takip ediyor |
 | Widget deep link | 🔶 **kısmi** — aşağıda |
-| Archive + sürüm guard | ✅ **ARCHIVE SUCCEEDED**, app 1.3.0/7 ↔ widget 1.3.0/7 |
+| Archive + sürüm guard | ✅ **ARCHIVE SUCCEEDED**, app ↔ widget sürümleri eşit |
 | build / lint / test | ✅ lint yalnızca önceden mevcut `'Icon'` uyarısı |
 | Ham renk taraması | ✅ yalnızca veri renkleri, `rgba(var(--anx-*-rgb))` ve yorumlar |
 | `WidgetTheme.swift` ↔ `index.css` | ✅ `--check` güncel |
