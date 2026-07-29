@@ -10,7 +10,7 @@ import {
   IconHome, IconCalendar, IconTarget, IconPulse, IconChart, IconFlame,
   IconLock, IconChevronRight, IconChevronLeft, IconX, IconPlus, IconCheck, IconBell,
   IconEye, IconEyeOff, IconTrash, IconSparkle, IconWind, IconBook,
-  IconClock, IconSwap, IconGraduation,
+  IconClock, IconSwap, IconGraduation, IconContrast,
 } from "./icons";
 
 const tap = (style = "light") => {
@@ -1670,6 +1670,8 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
       {/* ── Ayarlar ── */}
       <SectionLabel>ayarlar</SectionLabel>
       <Card style={{ padding:"4px 0", marginBottom:20 }}>
+        <AppearanceRow />
+        <div style={S.divider} />
         <SettingsRow
           icon={<IconBell size={19} />}
           title="Günlük hatırlatma"
@@ -1697,6 +1699,68 @@ function ReportTab({ studied, streak, anxiety, goals, onReset, notifOn, onToggle
           ariaLabel="Tüm verileri sıfırla"
         />
       </Card>
+    </div>
+  );
+}
+
+// ── Görünüm seçici (Faz 4) ───────────────────────────────────
+// SettingsRow'un dilini kullanır (aynı ikon+başlık+alt yazı düzeni, aynı
+// padding) ama tıklanabilir tek bir satır değil, 3 seçenekli segment kontrol.
+//
+// SEÇİLİ SEGMENTTE ACCENT ZEMİN YOK — bilerek. --violet üstüne --on-accent
+// (beyaz) koyu modda 4.5'i geçmiyor (paywall CTA'da ölçüldü: 3.20–3.84).
+// Bunun yerine kaygı skalasının kanıtlanmış dili: seçili = yükseltilmiş yüzey
+// + --text-1, seçilmemiş = --text-3 / --surface-input. Seçim ayrıca violet
+// kenarlıkla işaretleniyor (yedekli gösterge, tek başına renge dayanmıyor).
+const APPEARANCE = [
+  { v: "dark",   l: "Koyu"   },
+  { v: "light",  l: "Açık"   },
+  { v: "system", l: "Sistem" },
+];
+
+function AppearanceRow() {
+  const { preference, setPreference } = useTheme();
+  const btns = useRef([]);
+  const found = APPEARANCE.findIndex(o => o.v === preference);
+  const sel = found < 0 ? 0 : found;   // bilinmeyen tercihte de tam bir sekme durağı kalsın
+
+  const pick = n => { tap(); setPreference(APPEARANCE[n].v); btns.current[n]?.focus(); };
+  // WCAG radiogroup: ok tuşları hem taşır hem seçer, Home/End uçlara gider.
+  const onKeyDown = e => {
+    const d = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+    if (d) { e.preventDefault(); pick((sel + d + APPEARANCE.length) % APPEARANCE.length); }
+    else if (e.key === "Home") { e.preventDefault(); pick(0); }
+    else if (e.key === "End")  { e.preventDefault(); pick(APPEARANCE.length - 1); }
+  };
+
+  return (
+    <div style={{ padding:"14px 18px" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:12 }}>
+        <span style={{ color:"var(--text-3)", display:"flex", flexShrink:0 }}><IconContrast size={19} /></span>
+        <span style={{ flex:1 }}>
+          <span style={{ display:"block", fontSize:15, fontWeight:500, color:"var(--text-1)" }}>Görünüm</span>
+          <span style={{ display:"block", fontSize:12.5, color:"var(--text-4)", marginTop:2 }}>Uygulamanın rengini değiştir.</span>
+        </span>
+      </div>
+      <div role="radiogroup" aria-label="Görünüm" onKeyDown={onKeyDown} className="themed"
+        style={{ display:"flex", gap:4, background:"var(--surface-input)", borderRadius:"var(--r-sm)", padding:4 }}>
+        {APPEARANCE.map((o, n) => {
+          const on = n === sel;
+          return (
+            <button key={o.v} ref={el => { btns.current[n] = el; }}
+              role="radio" aria-checked={on} tabIndex={on ? 0 : -1}
+              onClick={() => pick(n)} className="pressable"
+              style={{
+                flex:1, padding:"9px 0", cursor:"pointer", fontFamily:"inherit", fontSize:13.5,
+                borderRadius:"var(--r-sm)", minWidth:0,
+                fontWeight: on ? 600 : 500,
+                background: on ? "var(--surface-2)" : "transparent",
+                border: `1.5px solid ${on ? "var(--violet)" : "transparent"}`,
+                color: on ? "var(--text-1)" : "var(--text-3)",
+              }}>{o.l}</button>
+          );
+        })}
+      </div>
     </div>
   );
 }

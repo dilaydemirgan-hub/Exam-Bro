@@ -77,6 +77,11 @@ export const IconSettings = p => (
 export const IconSwap = p => (
   <I {...p}><path d="M7 4 3.5 7.5 7 11M3.5 7.5H16M17 13l3.5 3.5L17 20M20.5 16.5H8" /></I>
 );
+// Yarısı dolu çember — "görünüm / kontrast". Dolu yarı currentColor ile
+// boyanıyor (base'in fill:none'ı burada bilerek eziliyor).
+export const IconContrast = p => (
+  <I {...p}><circle cx="12" cy="12" r="9" /><path d="M12 3a9 9 0 0 0 0 18Z" fill="currentColor" stroke="none" /></I>
+);
 export const IconGraduation = p => (
   <I {...p}><path d="m2.5 9 9.5-4.5L21.5 9 12 13.5 2.5 9Z" /><path d="M6.5 11v4.5c0 1.2 2.5 2.5 5.5 2.5s5.5-1.3 5.5-2.5V11" /><path d="M21.5 9v5" /></I>
 );

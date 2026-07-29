@@ -20,7 +20,7 @@
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
 | 3 | Eksiksiz uygulama | 🔄 **7 grubun 7'si de bitti** — kapanış maddeleri sürüyor |
-| 4 | Rapor sekmesine "Görünüm" seçici | ⬜ başlamadı |
+| 4 | Rapor sekmesine "Görünüm" seçici | ✅ |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
 | 7 | Doğrulama | ⬜ başlamadı |
@@ -764,9 +764,58 @@ Grup 4'teki iki AA ihlali bu yolla bulundu; göz kararı "biraz soluk" derken ö
 
 ---
 
-## 10. Faz 4 — Rapor sekmesine "Görünüm" seçici (başlamadı)
+## 10. Faz 4 — Rapor sekmesine "Görünüm" seçici ✅
 
-Verilmiş kararlar:
+`AppearanceRow` (`src/App.jsx`, `SettingsRow`'un hemen üstünde) + `IconContrast`
+(`src/icons.jsx`). Ayarlar kartının **içinde, üç mevcut satırın ÜSTÜNDE**, altında
+`S.divider`. Betik: **`tools/theme-check/appearance.mjs`** (kontrast + davranış).
+
+### ⚠️ Seçili segmentte accent zemin YOK — bilerek
+İlk akla gelen tasarım seçili segmente `--violet` zemin + `--on-accent` (beyaz)
+metindi. **Koyu modda AA'yı geçmiyor:** beyaz `#9d5cff` üstünde ~3.5, paywall
+CTA'sında ölçülen 3.20–3.84 ile aynı olgu. Onun yerine kaygı skalasının
+kanıtlanmış dili kullanıldı:
+
+| | Koyu | Açık |
+|---|---|---|
+| seçili segment (`--text-1` / `--surface-2`) | 16.38 ✓ | 17.82 ✓ |
+| seçilmemiş (`--text-3` / `--surface-input`) | 4.71 ✓ | 5.94 ✓ |
+| satır başlığı | 16.38 ✓ | 17.82 ✓ |
+| alt açıklama (`--text-4`) | **3.10 ✗** | 5.51 ✓ |
+| seçim kenarlığı ↔ segment (1.4.11) | 4.70 ✓ | 5.70 ✓ |
+| seçim kenarlığı ↔ ray (1.4.11) | 4.07 ✓ | 4.67 ✓ |
+
+> **Alt açıklamadaki 3.10 koyu mod borcu — yeni değil, MİRAS.** Aynı karttaki üç
+> `SettingsRow`'un alt yazısı da `--text-4` ile tam olarak 3.10 veriyor. Yeni satırı
+> `--text-3`'e almak onu kardeşlerinden **görünür biçimde farklı** yapardı;
+> `--text-4`'ü koyu modda açmak ise koyu modu değiştirirdi (§2 yasak). Görsel
+> tutarlılık seçildi. Açık modda geçiyor (5.51).
+
+Seçim göstergesi **yedekli**: zemin değişimi (`--surface-input` → `--surface-2`)
+tek başına 1.16–1.22 ile eşiğin altında, göstergeyi **violet kenarlık** taşıyor
+(rapor çubuklarındaki mantık, §4) — ayrıca `aria-checked` ve font ağırlığı.
+
+### Erişilebilirlik — ölçülen davranış
+`role="radiogroup"` + `role="radio"` + `aria-checked`, **roving tabindex**
+(her zaman tam **1** radio `tabindex=0`). Ok tuşları hem taşır hem seçer,
+uçlarda **sarar**; `Home`/`End` uçlara gider. Hepsi `appearance.mjs`'te doğrulandı:
+
+```
+"Açık" tıklandı   → theme=light  pref=light      (anında, kaydet butonu yok)
+ArrowRight        → Sistem       pref=system
+ArrowRight        → Koyu         pref=dark       (sondan başa sardı)
+Home / End        → Koyu / Sistem
+"Sistem" + cihaz→light/dark → theme cihazı izliyor, pref "system" kalıyor
+```
+
+Haptic: mevcut `tap()` kullanıldı, yenisi yazılmadı.
+
+> **Piksel notu:** bu satır Rapor ekranına **yeni UI eklediği** için koyu modun
+> render'ı bilerek değişti (sayfa 2324 → 2568px; `confirm`/`toast` görüntüleri de
+> kaydırma konumu kaydığı için farklı çıktı). Diff doğrulandı — fark yalnızca
+> dikey kayma + yeni satır. Referans yenilendi, sonrasında 14 ekranda 0 piksel.
+
+### Verilmiş kararlar (uygulandı)
 - **Konum:** Rapor ekranındaki mevcut "ayarlar" kartının **içine, üç mevcut satırın ÜSTÜNE**
   (`ReportTab` 1523–1614; kart ~1580–1610 civarı). `S.divider` ile ayır, mevcut
   `SettingsRow` dilini kullan.
