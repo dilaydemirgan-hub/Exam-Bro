@@ -1156,7 +1156,7 @@ senkron okuyabilmeli, tema tercihiyle aynı yerde dursun).
 | Lint uyarısı `'Icon' is defined but never used` | Önceden mevcut, `main`'de de var |
 | **`.pressable` + `.themed` çakışması** | ✅ **çözüldü** — geçici `html.theme-anim` sınıfı (§8 Q). Ölçüm aşağıda |
 | **W — lejant ↔ ısı haritası görsel dili** | ✅ **çözüldü** — A seçeneği, `anxLegend()` (§4) |
-| **Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden KISA** | ⬜ **Faz 3 bittikten SONRA, ayrı `fix:` commit'i.** Gerçek bug ama renkle ilgisi yok; düzeltmek koyu modun render'ını da değiştireceği için rapor ekranının piksel referansı yeniden alınmalı. Detay §4 |
+| **Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden KISA** | ✅ **çözüldü** (`61b6b5c`) — `v*5.5` → `8 + v*4.7`. v=1 artık 12.7px, kütük 8px'in üstünde; en yüksek çubuk 55px ile DEĞİŞMEDİ. Koyu modun render'ı bilerek değişti, piksel referansı yenilendi |
 | **Overlay yüzeyi ↔ perde** | ✅ **çözüldü** — açık mod perdesi %35 → **%45** (kullanıcı kararı). Açık mod 2.43 → **3.68** (en kötü hal 3.36) ✓. Koyu mod 1.36 ile mevcut borç, dokunulmadı. Detay aşağıda |
 | **PWA ikonunda eksik glif (tofu)** | ⬜ **açık — kapsam dışı bırakıldı.** `public/icon-{192,512}.png` ortasında boş kutu. Yalnızca **PWA kurulumunda** görünür; App Store iOS ikonu ve Android native ikonu ayrı dosyalardan geliyor, etkilenmiyor. Açık modla ilgisi yok. Düzeltme adımları aşağıda |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
