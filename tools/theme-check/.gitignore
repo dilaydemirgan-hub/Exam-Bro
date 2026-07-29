@@ -1,0 +1,9 @@
+# Referans ve karşılaştırma görüntüleri COMMIT EDİLMEZ.
+# Sebep: her biri ~1–3 MB, ekran başına iki kopya, her sürümde yenilenir —
+# repo şişer ve diff'i okunamaz hale gelir. Nasıl yeniden üretileceği
+# README.md'de yazılı; üretmek birkaç dakika sürüyor.
+shots/
+
+# Bu klasörün kendi bağımlılıkları (playwright ~1 GB tarayıcı indiriyor)
+node_modules/
+package-lock.json

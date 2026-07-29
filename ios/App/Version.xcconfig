@@ -1,0 +1,17 @@
+// ══════════════════════════════════════════════════════════════
+//  SÜRÜM — TEK KAYNAK
+//  Ana uygulama (App) ve widget extension (ExamBroWidget) bu dosyayı
+//  base configuration olarak kullanır. App Store, extension'ın sürümü ana
+//  uygulamayla BİREBİR aynı değilse yüklemeyi reddeder.
+//
+//  ⚠️ SÜRÜMÜ BURADAN DEĞİŞTİRİN — Xcode'un "General" sekmesinden DEĞİL.
+//  Oradan yazılan değer target build setting'i olur ve bu dosyayı EZER.
+//  Scripts/check-version-sync.sh tam da bunu yakalar ve build'i durdurur.
+// ══════════════════════════════════════════════════════════════
+
+MARKETING_VERSION = 1.4.0
+CURRENT_PROJECT_VERSION = 8
+
+// Guard betiği bunu okur: değer target'a ulaşmıyorsa base configuration
+// hiç bağlanmamış demektir (sessizce yanlış sürümle build edilirdi).
+XB_VERSION_SOURCE = xcconfig

@@ -2,22 +2,59 @@
    Exam Bro — Global styles & design tokens
    Tek kaynak: renk, tipografi, spacing, radius ve animasyonlar
    buradan yönetilir. Componentlerde ham hex kullanma.
+
+   TEMA: `:root` varsayılan olarak KOYU değerleri taşır (kayıtlı tercih
+   yoksa / JS çalışmadan önce koyu görünsün diye). `[data-theme="dark"]`
+   aynı bloğu paylaşır — iki kopya elle senkron tutulmaz.
+   `[data-theme="light"]` bloğu Faz 2'de doldurulacak.
+
+   Sınav ve psikoloji kategorisi renkleri VERİDİR (App.jsx içindeki
+   FIXED/OSYM/PSYCH_COLORS), token değildir. Onların yüzey üstündeki
+   soluk tonları --tint-* yüzdeleriyle üretilir.
    ══════════════════════════════════════════════════════════════ */
 
-:root {
+:root,
+:root[data-theme="dark"] {
   /* ── Surfaces ── */
   --bg:          #080810;
   --surface-1:   #101018;   /* kart zemini (koyu) */
   --surface-2:   #14141f;   /* kart zemini */
   --surface-3:   #1a1a2e;   /* yükseltilmiş kart / input */
+  --surface-input: #20203a; /* kaygı skalası pasif buton */
+  --surface-sheet: #12121c; /* onay sheet'i */
+  --surface-modal: #0e0e18; /* paywall modal kartı */
+  --surface-toast: #1e1e30; /* toast */
   --border:      #23233a;   /* standart hairline */
   --border-soft: #1a1a2c;
+  --border-strong: #3a3a58; /* hedef checkbox çemberi */
+  --border-grid: #1a1a3e;   /* kaygı ısı haritası kare kenarlığı */
+  --track:       #22223a;   /* ilerleme çubuğu / grafik boş zemin */
+  /* Rapor grafiğindeki "kayıt yok" kütüğünün kenarlığı. Koyu modda YOK:
+     saydam kenarlık, arkasındaki background'ı gösterdiği için (background-clip
+     varsayılanı border-box) kütük birebir aynı render ediliyor — koyu mod
+     piksel farkı 0. Açık modda kütük kartın üstünde 1.29:1 ile kayboluyordu,
+     farkı bu kenarlık taşıyor (docs/LIGHT-MODE.md §4). */
+  --track-line:  transparent;
+  --handle:      #2e2e46;   /* sheet tutamacı */
+  --switch-off:  #2c2c48;   /* toggle kapalı zemin */
+  --switch-knob: #fff;      /* toggle topuzu */
+
+  /* ── Sabit / yarı saydam katmanlar ── */
+  --header-bg:     rgba(8,8,16,0.92);
+  --nav-bg:        rgba(10,10,20,0.94);
+  --overlay-sheet: rgba(0,0,0,0.7);    /* onay sheet arkası */
+  --overlay-modal: rgba(0,0,0,0.72);   /* paywall arkası */
+  --overlay-boom:  rgba(4,4,10,0.82);  /* "Süpersin!" kutlaması */
 
   /* ── Text (WCAG: primary/secondary AA uyumlu) ── */
+  --text-0: #fff;           /* en yüksek kontrast (onboarding) */
   --text-1: #f2f2f8;        /* başlıklar */
   --text-2: #b4b4cc;        /* gövde */
   --text-3: #8a8aa6;        /* ikincil */
   --text-4: #62627e;        /* ipucu / meta — yalnızca dekoratif */
+  --on-accent: #fff;        /* violet/pink zemin üstü metin */
+  --on-green:  #04120c;     /* yeşil buton üstü metin */
+  --on-gold:   #1a1200;     /* sarı buton üstü metin */
 
   /* ── Brand & semantic accents ── */
   --violet: #9d5cff;
@@ -27,6 +64,89 @@
   --blue:   #5c9bff;
   --orange: #ff9736;
   --amber:  #ffb703;
+  --danger:       #e5375f;
+  --danger-muted: #c04a6e;  /* sil ikonu */
+
+  /* ── Accent türevleri ── */
+  --green-soft: rgba(16,217,158,0.10);   /* tamamlandı zemini */
+  --green-line: rgba(16,217,158,0.3);    /* tamamlandı kenarlığı */
+  --green-edge: rgba(16,217,158,0.35);
+  --green-deep:   #059669;               /* buton gradyan sonu */
+  --green-deep-2: #04a07a;               /* rapor çubuğu gradyan sonu */
+
+  --violet-soft:   rgba(157,92,255,0.12);
+  --violet-line:   rgba(157,92,255,0.25);
+  --violet-line-2: rgba(157,92,255,0.3);
+  --violet-line-3: rgba(157,92,255,0.35);
+  --violet-light:  #b07aff;   /* ÖSYM butonu yazısı */
+  --violet-text:   #c9b4ff;   /* ders bölüm başlığı */
+  --violet-text-2: #cbb2ff;   /* Pro teaser başlığı */
+  --violet-text-3: #bdb3e0;   /* hedef öneri çipi */
+
+  --orange-soft:   rgba(255,151,54,0.12);
+  --orange-line:   rgba(255,151,54,0.4);
+  --orange-edge:   #ff973655;
+  --orange-edge-2: #ff973644;
+  --orange-edge-3: #ff973630;
+  --orange-text:   #9a7a52;   /* seri kartı alt yazısı */
+  --streak-pill-bg: #2a160033;
+
+  --gold-line: rgba(255,190,11,0.4);
+  --badge-blue-bg: #101830;   /* "GÜN n" rozeti */
+
+  --breath-text:   #eafff7;
+  --breath-text-2: #7fd9bf;
+  --success-text:  #dfffe9;   /* program kapanış metni */
+  --today-ring:    rgba(255,255,255,0.4);  /* ısı haritasında bugün */
+
+  /* ── Kaygı skalası ──
+     Kanal listesi olarak tutulur: anxColor() sürekli bir alfa rampası
+     üretiyor, rgba(var(--...-rgb), a) ile tema-farkında hale geliyor. */
+  --anx-low-rgb:  16,217,158;
+  --anx-mid-rgb:  255,183,3;
+  --anx-high-rgb: 255,77,148;
+  --anx-low:   #10d99e;
+  --anx-mid:   #ffb703;
+  --anx-high:  #ff4d94;
+  --anx-empty: #1a1a2e;   /* kayıt yok */
+  --anx-none:  #444;      /* değer yok (anxSolid) */
+
+  /* ── Veri renklerinin (sınav / kategori) yüzey üstü tonu ──
+     Koyu mod değerleri eski hex-alfa eklerinin birebir karşılığıdır:
+     0x12/255 = %7.059, 0x14 = %7.843, 0x22 = %13.333,
+     0x30 = %18.824, 0x33 = %20. Açık modda bu yüzdeler artırılacak. */
+  --tint-weak:   7.059%;
+  --tint-soft:   7.843%;
+  --tint-line:   13.333%;
+  --tint-edge:   18.824%;
+  --tint-edge-2: 20%;
+
+  /* ── Gradyanlar ── */
+  --grad-logo:      linear-gradient(90deg,#b98aff,#ff7ab0);
+  --grad-brand:     linear-gradient(90deg,var(--violet),var(--pink));
+  --grad-brand-135: linear-gradient(135deg,var(--violet),var(--pink));
+  --grad-green:     linear-gradient(135deg,var(--green),var(--green-deep));
+  --grad-green-bar: linear-gradient(180deg,var(--green),var(--green-deep-2));
+  --grad-gold:      linear-gradient(135deg,var(--gold),var(--orange));
+  --grad-streak:    linear-gradient(135deg,#1c0e00,#241300);
+  --grad-pro:       linear-gradient(135deg,#170f28,#1f1433);
+  --grad-boom:      radial-gradient(circle at 50% 35%, #2a1a00, #170e00);
+  --grad-breath:    radial-gradient(circle at 50% 40%, #0e5a44, #06281f);
+  --grad-breath-halo: radial-gradient(circle, rgba(16,217,158,0.16), transparent 70%);
+  --grad-closing:   linear-gradient(135deg,#0b3a2a,#0e2a40);
+
+  /* ── Gölge & parıltı ──
+     Koyu modda gölge neredeyse görünmez; ayrım kenarlıkla yapılır.
+     Bu yüzden --shadow-card koyu modda YOK, açık modda taşıyıcı öğe. */
+  --selection-bg: rgba(157,92,255,0.32);
+  --shadow-card:  none;
+  --shadow-toast: 0 8px 30px rgba(0,0,0,0.55);
+  --shadow-knob:  0 1px 4px rgba(0,0,0,0.4);
+  --glow-green:   0 8px 28px rgba(16,217,158,0.35);
+  --glow-orange:  0 0 60px rgba(255,151,54,0.35);
+  --glow-breath:  0 0 50px rgba(16,217,158,0.3);
+  --glow-logo:    drop-shadow(0 0 20px rgba(157,92,255,0.5));
+  --glow-logo-lg: drop-shadow(0 0 24px rgba(157,92,255,0.55));
 
   /* ── Radius scale ── */
   --r-sm: 10px;
@@ -38,7 +158,183 @@
   --font-ui:   'Fredoka', -apple-system, 'SF Pro Rounded', system-ui, sans-serif;
   --font-mono: 'Space Mono', ui-monospace, 'SF Mono', monospace;
 
+  /* Native form kontrolleri (date/time picker), scrollbar ve varsayılan
+     kontrol renkleri buna bağlı — tema ile birlikte değişmek ZORUNDA. */
   color-scheme: dark;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   AÇIK MOD
+   ──────────────────────────────────────────────────────────────
+   ⚠️ SPECIFICITY — BU BLOĞU TAŞIMA / SEÇİCİYİ SADELEŞTİRME.
+   Koyu blok iki seçiciye açılıyor: ':root' (0,1,0) ve
+   ':root[data-theme="dark"]' (0,2,0). Bu blok da ':root[...]'
+   (0,2,0) olarak yazıldı ve koyu bloğun ALTINDA duruyor.
+   Sadece '[data-theme="light"]' yazılsaydı specificity (0,1,0)
+   olur, bare ':root' ile eşitlenir ve yalnızca kaynak sırası
+   sayesinde çalışırdı — kırılgan. Eşit specificity + sonra gelmek
+   yerine, YÜKSEK specificity + sonra gelmek istiyoruz.
+
+   Tasarım kuralları (koyu modun tersi):
+   • Saf beyaz zemin yok: sayfa kırık beyaz, kartlar beyaz —
+     yani kartlar zeminden bir ton AÇIK.
+   • Kenarlıklar daha belirgin, gölgeler gerçek.
+   • Accent'ler bir tık koyu: marka kimliği aynı, ton koyulaşıyor.
+   • Tüm metin/zemin çiftleri WCAG AA (normal 4.5:1, büyük 3:1).
+   ══════════════════════════════════════════════════════════════ */
+:root[data-theme="light"] {
+  /* ── Surfaces ── */
+  --bg:          #f2f2f6;   /* kırık beyaz sayfa — saf beyaz göz yorar */
+  --surface-1:   #f8f8fb;   /* hafif panel */
+  --surface-2:   #ffffff;   /* ana kart — zeminden AÇIK */
+  --surface-3:   #ffffff;   /* yükseltilmiş kart / kontrol */
+  --surface-input: #e8e8ef;
+  --surface-sheet: #ffffff;
+  --surface-modal: #ffffff;
+  --surface-toast: #ffffff;
+  --border:      #d5d5e0;   /* açık modda belirgin olmalı */
+  --border-soft: #e4e4ec;
+  --border-strong: #a8a8bd;
+  --border-grid: #e0e0e9;
+  --track:       #e2e2ea;
+  --track-line:  #7a7a8e;   /* kütük ↔ kart 4.20:1 — kütüğü kartın üstünde tutar */
+  --handle:      #d0d0dc;
+  --switch-off:  #c3c3d2;
+  --switch-knob: #fff;
+
+  /* ── Sabit / yarı saydam katmanlar ── */
+  --header-bg:     rgba(242,242,246,0.92);
+  --nav-bg:        rgba(255,255,255,0.94);
+  /* Perde koyu moddakinden (0.72) belirgin daha açık, ama 0.35 DEĞİL: overlay
+     yüzeyi (beyaz kart) perdeden ayırt edilebilmeli (1.4.11 → 3:1). En kötü hal
+     perdenin BEYAZ bir kartın üstüne düştüğü yer — orada perde en açık kalıyor:
+       α=0.35 → #a6a6a6, kart ↔ perde 2.43:1 ✗
+       α=0.42 → #949494, 3.03:1 ✓  (eşiğin tam sınırı)
+       α=0.45 → #8c8c8c, 3.36:1 ✓  (pay bırakır)
+     Kenarlık bu işi taşıyamıyor: --border (#d5d5e0) perdeye beyazdan DAHA
+     YAKIN, yani sınırı yüzeyin kendisi taşıyor (docs/LIGHT-MODE.md §13). */
+  --overlay-sheet: rgba(0,0,0,0.45);
+  --overlay-modal: rgba(0,0,0,0.45);
+  --overlay-boom:  rgba(246,246,249,0.86);
+
+  /* ── Text ── */
+  --text-0: #0d0d14;
+  --text-1: #17171f;
+  --text-2: #3f3f52;
+  --text-3: #55556b;
+  /* Koyu moddaki muadili gibi "ipucu/meta" olarak seçilmişti, ama bu token
+     sınav TARİHİNİ de taşıyor — dekorasyon değil bilgi. --tint-weak yıkamalı
+     sınav kartlarının üstünde 4.29/4.47 ile eşiğin bir tık altında kalıyordu
+     (düz yüzeylerde zaten 5.18 ile geçiyordu). %4 koyulaştırıldı:
+     tint'li kartta 4.56 ✓, beyaz kartta 5.51 ✓. Koyu mod ayrı değer, etkilenmez. */
+  --text-4: #67677d;
+  --on-accent: #fff;
+  --on-green:  #fff;   /* açık modda yeşil KOYU → üstüne beyaz yazı */
+  --on-gold:   #fff;   /* açık modda sarı KOYU → üstüne beyaz yazı */
+
+  /* ── Brand & semantic accents (koyulaştırılmış varyantlar) ── */
+  --violet: #7c3aed;
+  --pink:   #db2777;
+  --gold:   #9c5f08;
+  --green:  #0d805b;
+  --blue:   #2563eb;
+  --orange: #a8560e;
+  --amber:  #976801;
+  --danger:       #d01f45;
+  --danger-muted: #a83a58;
+
+  /* ── Accent türevleri ── */
+  --green-soft: rgba(13,128,91,0.10);
+  --green-line: rgba(13,128,91,0.35);
+  --green-edge: rgba(13,128,91,0.45);
+  --green-deep:   #047857;
+  --green-deep-2: #0b7a5c;
+
+  --violet-soft:   rgba(124,58,237,0.10);
+  --violet-line:   rgba(124,58,237,0.30);
+  --violet-line-2: rgba(124,58,237,0.35);
+  --violet-line-3: rgba(124,58,237,0.40);
+  --violet-light:  #6d28d9;
+  --violet-text:   #5b21b6;
+  --violet-text-2: #5b21b6;
+  --violet-text-3: #4c1d95;
+
+  /* Seri rozeti: türetilmiş tint burada ters teper — zemini accent'e
+     yaklaştırdıkça üstündeki accent metnin kontrastı DÜŞÜYOR (%4'te bile
+     4.47:1). Bu yüzden açık modda sabit sıcak krem. */
+  --orange-soft:   #fdf1e5;
+  --orange-line:   rgba(168,86,14,0.40);
+  --orange-edge:   rgba(168,86,14,0.45);
+  --orange-edge-2: rgba(168,86,14,0.38);
+  --orange-edge-3: rgba(168,86,14,0.32);
+  --orange-text:   #7c5219;
+  --streak-pill-bg: #fdf1e5;
+
+  --gold-line: rgba(156,95,8,0.45);
+  --badge-blue-bg: #e4edfd;
+
+  --breath-text:   #0b4a37;
+  --breath-text-2: #2a6a58;
+  --success-text:  #12503a;
+  --today-ring:    rgba(0,0,0,0.45);
+
+  /* ── Kaygı skalası ──
+     DİKKAT: --anx-*-rgb ile --anx-* AÇIK MODDA BİLEREK AYRIŞIR.
+       --anx-*      → lejant, seçili buton, durum etiketi. METİN taşıdığı ya da
+                      metin altında olduğu için Faz 2'de "AA'yı geçen EN AÇIK
+                      ton" olarak seçildi.
+       --anx-*-rgb  → SADECE anxColor(), yani ısı haritası ve rapor çubuğu.
+                      Orada metin yok; gereken şey OKUNABİLİRLİK değil ARALIK.
+     Açık modda sayfa zemini (L=0.874) ile --anx-low (L=0.163) arasında yalnızca
+     4.35:1 var; koyu modda (L=0.006 ↔ L=0.50) 9.8:1 dağıtılabiliyor. Bu yüzden
+     --anx-* değerleriyle çizilen rampa koyu modun ayrım gücüne ULAŞAMIYOR
+     (ölçüldü: bant sınırı 1.57 vs 2.75, en soluk kare↔sayfa 1.99 vs 3.34).
+     Kanallar bu yüzden ayrıca koyulaştırıldı; alfa rampasının açık mod dalıyla
+     birlikte çözüldü (docs/LIGHT-MODE.md §4 — anxColor). */
+  --anx-low-rgb:  7,74,52;
+  --anx-mid-rgb:  94,57,5;
+  --anx-high-rgb: 145,22,65;
+  --anx-low:   #0d805b;
+  --anx-mid:   #9c5f08;
+  --anx-high:  #c81e5a;
+  --anx-empty: #e6e6ee;
+  --anx-none:  #8e8ea6;
+
+  /* ── Veri renklerinin yüzey üstü tonu ──
+     Koyu moddaki yüzdeler burada AYNEN kullanılamaz: %7'lik bir tint
+     koyu zeminde görünür bir vurgu yaratır, beyaza yakın zeminde kaybolur.
+     Her seviye göze bakarak yeniden dengelendi (otomatik çarpan yok). */
+  --tint-weak:   14%;    /* kart yıkaması — dekoratif, metnin altında kalır */
+  --tint-soft:   15%;    /* sayaç rakam kutusu zemini */
+  --tint-line:   30%;    /* rakam kutusu kenarlığı — çizgiler belirgin olmalı */
+  --tint-edge:   38%;    /* sınav/kategori kartı kenarlığı */
+  --tint-edge-2: 38%;    /* psikoloji kartı kenarlığı */
+
+  /* ── Gradyanlar ──
+     --grad-brand/-135/green/green-bar/gold token referanslı olduğu için
+     yukarıdaki accent'lerle birlikte kendiliğinden koyulaştı; burada
+     yalnızca sahneye özel koyu gradyanların açık karşılıkları var. */
+  --grad-logo:      linear-gradient(90deg,#7c3aed,#db2777);
+  --grad-streak:    linear-gradient(135deg,#fff6ea,#ffeed9);
+  --grad-pro:       linear-gradient(135deg,#f6efff,#fbf0ff);
+  --grad-boom:      radial-gradient(circle at 50% 35%, #fff1dd, #ffe4c0);
+  --grad-breath:    radial-gradient(circle at 50% 40%, #d9f7ec, #a9e9d6);
+  --grad-breath-halo: radial-gradient(circle, rgba(13,128,91,0.14), transparent 70%);
+  --grad-closing:   linear-gradient(135deg,#e8f8f1,#e6f1fc);
+
+  /* ── Gölge & parıltı ──
+     Açık modda gölge taşıyıcı öğedir; kartlar zeminden gölgeyle ayrılır. */
+  --selection-bg: rgba(124,58,237,0.20);
+  --shadow-card:  0 1px 2px rgba(16,16,32,.05), 0 4px 12px rgba(16,16,32,.07);
+  --shadow-toast: 0 2px 6px rgba(16,16,32,.10), 0 12px 32px rgba(16,16,32,.16);
+  --shadow-knob:  0 1px 3px rgba(16,16,32,.28);
+  --glow-green:   0 6px 20px rgba(13,128,91,.28);
+  --glow-orange:  0 0 44px rgba(168,86,14,.20);
+  --glow-breath:  0 0 40px rgba(13,128,91,.20);
+  --glow-logo:    drop-shadow(0 2px 8px rgba(124,58,237,.28));
+  --glow-logo-lg: drop-shadow(0 3px 12px rgba(124,58,237,.32));
+
+  color-scheme: light;
 }
 
 html, body, #root {
@@ -58,6 +354,44 @@ body {
 }
 * { box-sizing: border-box; }
 ::-webkit-scrollbar { width: 0; }
+::selection { background: var(--selection-bg); color: var(--text-1); }
+
+/* ── Tema geçişi ──────────────────────────────────────────────
+   BİLEREK '*' seçicisine konmadı. Sadece yüzey/konteyner öğelerine
+   elle .themed eklenir ve yalnızca background-color + color animasyonu
+   yapar. Muaf tutulanlar: BreathCircle, ilerleme çubukları,
+   "Süpersin!" overlay'i, geri sayım rakam kutuları — bunlarda kendi
+   transform/width/height animasyonları var, tema geçişi eklenirse mod
+   değişiminde sürüklenme görünüyor. Muafiyet iki katmanlı: bu öğeler
+   .themed/.pressable ALMAZ, ayrıca .no-theme-anim ile işaretlidir.
+   prefers-reduced-motion aşağıdaki global blokta zaten kapatıyor. */
+.themed { transition: background-color 180ms ease, color 180ms ease; }
+
+/* ── Mod değişimi: GEÇİCİ kural ────────────────────────────────
+   Sorun: .pressable de 'transition' KISAYOLUNU yazıyor ve aynı
+   specificity'de (0,1,0) daha altta olduğu için .themed'i eziyor —
+   yani .pressable + .themed taşıyan butonlar mod değişiminde
+   sıçrıyordu.
+
+   Kalıcı bir '.pressable.themed { … }' kuralı ÇÖZÜM DEĞİL: o kural
+   her zaman aktif olurdu ve KOYU modda da durum değişimlerinde
+   ("Bugün Çalıştım" → doneToday: --grad-green'den --green-soft'a)
+   180ms'lik renk geçişi başlatırdı. Koyu modun davranışı değişemez.
+
+   Bunun yerine geçiş, kullanıcı tetiklediği ANDA geçici bir sınıfla
+   veriliyor: theme.jsx mod değişiminde <html>'e .theme-anim ekler ve
+   200ms sonra kaldırır. Diğer tüm zamanlarda .pressable'ın tap
+   animasyonu ve durum renkleri bugünkü haliyle birebir aynı kalır.
+   'html.theme-anim .pressable' (0,3,1) → .pressable'ın (0,1,0)
+   kısayolunu yener. '*' KULLANILMIYOR, '!important' KULLANILMIYOR. */
+html.theme-anim .themed:not(.no-theme-anim) {
+  transition: background-color 180ms ease, color 180ms ease;
+}
+/* .pressable'ın kendi tap geçişi 200ms'lik pencerede de korunur. */
+html.theme-anim .pressable:not(.no-theme-anim) {
+  transition: transform 0.15s ease, opacity 0.15s ease,
+              background-color 180ms ease, color 180ms ease;
+}
 
 button {
   font-family: var(--font-ui);
