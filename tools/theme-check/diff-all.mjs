@@ -4,7 +4,9 @@
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";
-import { SCREENS } from "./shoot-all.mjs";
+// lib/screens.mjs'ten — shoot-all.mjs'ten DEĞİL: onu import etmek CLI gövdesini
+// de çalıştırıyor ve diff'ten önce 14 ekranı yeniden çekiyordu.
+import { SCREENS } from "./lib/screens.mjs";
 
 const [A, B] = process.argv.slice(2);
 if (!A || !B) { console.error("kullanım: node diff-all.mjs <önek-A> <önek-B>"); process.exit(1); }
