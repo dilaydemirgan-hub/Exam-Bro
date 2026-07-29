@@ -19,13 +19,15 @@
 | 1 | Tema altyapısı (token'lar, `data-theme`, `useTheme`) | ✅ `567de95` |
 | — | `fix:` kaygı etiketi zemini | ✅ `7687f47` |
 | 2 | Açık mod paleti | ✅ `42f84dc` |
-| 3 | Eksiksiz uygulama | 🔄 **7 gruptan 6'sı bitti** |
+| 3 | Eksiksiz uygulama | 🔄 **7 grubun 7'si de bitti** — kapanış maddeleri sürüyor |
 | 4 | Rapor sekmesine "Görünüm" seçici | ⬜ başlamadı |
 | 5 | iOS widget'ları | ⬜ başlamadı (Xcode'da elle adım gerekiyor) |
 | 6 | Uygulama içinden widget sınavı seçme | ⬜ başlamadı |
 | 7 | Doğrulama | ⬜ başlamadı |
 
-Commit geçmişi (yeniden eskiye): `c78a02c` faz3-6 · `15588be` docs · `97bcef8` fix(grafik+W) ·
+Commit geçmişi (yeniden eskiye): `e11eb17` faz3-7 · `76eeb30` docs(§6 düzeltme) ·
+`f1d3858` chore(eslint) · `919cf30` docs · `542d907` chore(düzenek) · `a04d6e7` docs ·
+`c78a02c` faz3-6 · `15588be` docs · `97bcef8` fix(grafik+W) ·
 `4d200f5` faz3-5 · `759a1df` fix(ısı haritası) ·
 `fe368f2` docs · `2a671ad` faz3-4 · `ca15afb` fix(tema) ·
 `0ec94bd` docs · `acdd868` faz3-3 · `edd7ec8` chore · `da1470f` docs ·
@@ -417,13 +419,45 @@ hesaplanmış tabloyla birebir tutuyor (`#9c5bfd` / `#109773` / `#ae7e0c`, açı
 çalışıyor, nefes döngüsü mod değişiminde kesilmiyor. `.themed`: "aklında kalsın" kutusu,
 `ProgramView` gün kartı ve "bugünkü görev" kutusu.
 
-### Kalan gruplar (her biri ayrı commit + koyu/açık ekran görüntüsü)
+**7 ✅ paywall + overlay'ler + toast + onay sheet — `e11eb17`**
+`Paywall` (`App.jsx` ~1251–1305), `ui.jsx` → `useToast` + `ConfirmSheet`.
+**Renk değişikliği gerekmedi** — üçü de zaten tamamen token üstündeydi
+(`--surface-modal`/`-sheet`/`-toast`, `--overlay-modal`/`-sheet`, `--handle`,
+`--shadow-toast`) ve açık karşılıkları Faz 2'de girilmişti. **`ink()` noktası yok:**
+hiçbiri veri rengi kullanmıyor, hepsi token — §6 kova 3.
+Kod değişikliği yalnızca `.themed` (perde + kart, perde + sheet, toast); gerekçe
+aşağıdaki S senaryosu. Muafiyet gerekmedi — kendi girişleri `animation`
+(`sheetUp`/`toastIn`/`fadein`), geçici kuralın verdiği `transition` onları kesmiyor.
 
-Not: aşağıdaki satır numaraları grup 3–5'ten sonra ~30 satır kaymıştır.
+Ölçüm (`contrast-overlays.mjs`, 20 satır × 2 mod). **Açık mod her satırda koyu moda
+eşit ya da ondan iyi.** Öne çıkanlar:
 
-| # | Grup | Kapsam (`src/App.jsx`) | Yapılacaklar |
+| Yer | Kova | Koyu | Açık |
 |---|---|---|---|
-| 7 | **Paywall + overlay'ler** | `Paywall` ~1246–1300, `ui.jsx` toast + `ConfirmSheet` | `--overlay-sheet` / `--overlay-modal` (%35), `--surface-modal`, `--handle`, `--shadow-toast` |
+| Paywall başlığı 23px/700 | large 3 | 17.20 ✓ | 17.82 ✓ |
+| fayda başlığı / açıklaması | 4.5 | 17.20 / 5.72 ✓ | 17.82 / 7.25 ✓ |
+| fayda ikonu çipi (`--violet-soft`) | 3 | 4.40 ✓ | 4.91 ✓ |
+| **CTA "Pro'ya Geç"** (gradyan, 5 nokta) | 4.5 | **3.20 ✗** | **4.76 ✓** |
+| **"Şimdi değil"** (`--text-4`) | 4.5 | **3.26 ✗** | **5.18 ✓** |
+| onay başlığı / gövdesi | 4.5 | 16.68 / 5.55 ✓ | 17.82 / 7.25 ✓ |
+| **onay butonu (`--danger`)** | 4.5 | **4.16 ✗** | **5.30 ✓** |
+| "Vazgeç" | 4.5 | 5.55 ✓ | 7.25 ✓ |
+| toast metni | 4.5 | 14.67 ✓ | 17.82 ✓ |
+
+Koyu moddaki **üç** eksik (CTA, "Şimdi değil", danger butonu) mevcut borç —
+koyu mod referans, dokunulmadı. **Açık modda üçü de geçiyor.**
+
+> ⚠️ **Overlay yüzeyi ↔ perde sınırı iki modda da 3:1'in altında.**
+> Kart/sheet yüzeyi perdeden: koyu **1.08 / 1.11**, açık **2.67**. 1px `--border`
+> ile: koyu 1.36, açık 1.84 — yani **açık modda sınırı kenarlık değil yüzeyin
+> kendisi taşıyor** (perde orta gri, beyaz ondan uzak; açık gri kenarlık yakın).
+> Açık mod koyu modun ~2 katı, yani kabul ölçütü (§9) tutuyor. Yine de 3'ün
+> altında; **çözülebilir ama palet kararına dokunuyor** → §13'te açık konu.
+
+### Kalan gruplar
+
+**Yok — Faz 3'ün 7 grubu da bitti.** Kalanlar aşağıdaki "Faz 3 sonunda ayrıca"
+maddeleri.
 
 ### Grup sonrası her seferinde
 1. `npm run build` + `npm run lint` + `npm test`
@@ -432,9 +466,18 @@ Not: aşağıdaki satır numaraları grup 3–5'ten sonra ~30 satır kaymıştı
 4. **Bu dosyayı güncelle**, ayrı commit
 
 ### Faz 3 sonunda ayrıca
-- **S — geçiş senaryoları:** ① Paywall bottom sheet **açıkken** mod değiştir ⬜
+- **S — geçiş senaryoları:** ① Paywall bottom sheet **açıkken** mod değiştir ✅
   ② `BreathingPlayer` **çalışırken** mod değiştir ✅ (§13'te ölçüldü — nefes döngüsü
-  kesintisiz devam ediyor).
+  kesintisiz devam ediyor). Üçüncüsü olarak onay sheet'i de eklendi ✅.
+  Betik: `theme-transition.mjs` blok **(e)** ve **(f)**. Ölçülen:
+
+  | | Paywall (e) | Onay sheet'i (f) |
+  |---|---|---|
+  | mod değişimi ANINDA açık kalıyor mu | evet ✓ | evet ✓ |
+  | kart/sheet zemini | `#0e0e18` → `#ffffff` ✓ | `#12121c` → `#ffffff` ✓ |
+  | perde | `rgba(0,0,0,.72)` → `rgba(0,0,0,.35)` ✓ | — |
+  | geçici pencerede `transition` | `background-color .18s, color .18s` ✓ | aynı ✓ |
+  | sonrasında hâlâ etkileşimli | "Şimdi değil" kapatıyor ✓ | — |
 - Kontrol listesini (`~/Downloads/exambro-acik-mod-widget-komutu.md`, Faz 3) madde madde geç.
 - `public/manifest.json`'daki `#080810` **hâlâ dokunulmadı** (PWA/Android) — Faz 3 sonunda
   kullanıcıyla konuşulacak.
@@ -490,7 +533,16 @@ açılışta renk animasyonu istemiyoruz, `data-theme`'i FOUC script'i zaten yaz
 **`.themed` ALAN öğeler:** `S.root`, `S.header`, `S.nav`, `Card` (`ui.jsx`), `CountCard` kökü,
 ana sayfadaki motivasyon kartı, "Bugün Çalıştım" butonu, psikoloji köşesi kartı, Pro teaser,
 `ExamsTab` manuel ekleme ekranındaki 3 input, `GoalsTab` hedef satırları + hedef input'u,
-`AnxietyTab` "günün notu" kartı, `Stat` kutuları, `ReportTab` haftalık özet bloğu.
+`AnxietyTab` "günün notu" kartı, `Stat` kutuları, `ReportTab` haftalık özet bloğu,
+**`Paywall` perdesi + kartı, `ConfirmSheet` perdesi + sheet'i, toast** (grup 7).
+
+> **Overlay'ler neden `.themed` alıyor ve neden muafiyet gerekmiyor:** üçü de
+> **açıkken mod değişebiliyor** (§7 S senaryosu) ve renkleri iki modda farklı —
+> geçiş verilmezse sayfanın geri kalanı yumuşak geçerken overlay sıçrıyor.
+> Muafiyet gerekmiyor çünkü kendi girişleri `transition` değil **`animation`**
+> (`sheetUp` / `toastIn` / `fadein`); geçici kuralın verdiği `transition`
+> onlarla aynı özelliğe yazmıyor, dolayısıyla kesmiyor. Muaf listesi
+> (`.no-theme-anim`) yalnızca kendi **`transition`**'ı olanlar içindir.
 
 #### MUAF öğeler — `.no-theme-anim`
 Kendi `transform`/`width`/`height` animasyonları var; geçici kural da bunlara **dokunamaz**,
@@ -556,10 +608,15 @@ yeniden üretiliyor — saklamaya değmez.
 
 ### Koyu mod regresyon testi (piksel farkı) — **en önemli güvenlik ağı**
 
-`shoot-all.mjs` standart **11 ekranı** çeker: `home` · `exams` · `osym` · `manual` ·
-`goals` · `anx` · `anx-low` · `report` · `hub` · `psych-cat` · `breath`.
+`shoot-all.mjs` standart **14 ekranı** çeker: `home` · `exams` · `osym` · `manual` ·
+`goals` · `anx` · `anx-low` · `report` · `hub` · `psych-cat` · `breath` ·
+**`paywall` · `confirm` · `toast`** (son üçü grup 7'de eklendi).
 Yeni ekran eklerken `SCREENS` sabitine ekleyin; hem referans hem karşılaştırma tarafı
 kendiliğinden kapsar.
+
+> Overlay ekranları `"viewport"` işaretiyle **tam sayfa değil** çekiliyor:
+> `position:fixed` oldukları için fullPage çekimde arkalarındaki kaydırılabilir
+> sayfanın boyu belirleyici oluyor ve gürültü üretiyor.
 
 **Düzeneğin kendisi test edildi:** `--surface-2`'ye tek hex birimlik değişiklik
 (`#14141f` → `#15151f`) verildi; 11 ekranın **10'unda** yakalandı ve çıkış kodu 1 döndü.
@@ -709,7 +766,48 @@ her noktada **durulup kullanıcıya sorulacak**. Kullanıcı Xcode'u kendi açac
 | **`.pressable` + `.themed` çakışması** | ✅ **çözüldü** — geçici `html.theme-anim` sınıfı (§8 Q). Ölçüm aşağıda |
 | **W — lejant ↔ ısı haritası görsel dili** | ✅ **çözüldü** — A seçeneği, `anxLegend()` (§4) |
 | **Rapor grafik 2: v=1 çubuğu "kayıt yok" kütüğünden KISA** | ⬜ **Faz 3 bittikten SONRA, ayrı `fix:` commit'i.** Gerçek bug ama renkle ilgisi yok; düzeltmek koyu modun render'ını da değiştireceği için rapor ekranının piksel referansı yeniden alınmalı. Detay §4 |
+| **Overlay yüzeyi ↔ perde 3:1'in altında (iki modda da)** | ⬜ **Karar kullanıcıya soruldu.** Koyu 1.08/1.11, açık 2.67 — açık mod ~2 kat iyi, kabul ölçütü tutuyor ama 1.4.11'in altında. Detay ve çözüm hesabı aşağıda |
 | FIXED liste kartının gizli hali | ⬜ `opacity:0.55` her iki modda da metni ~2.2:1'e düşürüyor; **koyu modda da aynı**, yani açık moda özgü regresyon değil. Yanında `IconEyeOff` yedeği var. Değiştirmek koyu modu da değiştirir → dokunulmadı |
+
+### Overlay yüzeyi ↔ perde — ölçüm ve çözüm hesabı
+
+`contrast-overlays.mjs`, grup 7. Kart/sheet yüzeyinin **perdeden** ayırt edilebilirliği:
+
+| | Koyu | Açık |
+|---|---|---|
+| kart yüzeyi ↔ perde | 1.08 ✗ | **2.67 ✗** |
+| kart 1px `--border`'ı ↔ perde | 1.36 ✗ | 1.84 ✗ |
+| sheet yüzeyi ↔ perde | 1.11 ✗ | **2.67 ✗** |
+| toast kenarlığı ↔ sayfa | 1.20 ✗ | 1.44 ✗ (gölge de ayırıyor) |
+
+**Açık modda sınırı kenarlık değil yüzeyin kendisi taşıyor** — rapor çubuklarındaki
+(§4) mantığın tersi. Sebep: perde orta gri (`#9e9ea0`); beyaz yüzey ondan uzak, açık
+gri `--border` (`#d5d5e0`) ise yakın. Kenarlığı koyulaştırmak açık modda kartın
+çerçevesini görünür kılar ama **koyu modu da değiştirir** (`--border` paylaşılıyor).
+
+**Tek dokunuşluk çözüm perdenin alfası.** Açık modda `--overlay-modal` /
+`--overlay-sheet` şu an **0.35**. Perde, arkasındaki içeriğe göre farklı koyulukta
+çıkıyor; **en kötü hal perdenin beyaz bir kartın (255) üstüne düştüğü yer**, çünkü
+orada perde en açık kalıyor. Beyaz yüzey ↔ perde için hesap:
+
+| α | beyaz kart arkada | sayfa zemini arkada |
+|---|---|---|
+| **0.35 (şu an)** | `#a6a6a6` = **2.43 ✗** | `#9d9da0` = 2.70 ✗ |
+| 0.40 | `#999999` = 2.85 ✗ | `#919194` = 3.14 ✓ |
+| 0.42 | `#949494` = 3.03 ✓ | `#8c8c8f` = 3.35 ✓ |
+| **0.45** | `#8c8c8c` = **3.36 ✓** | `#858587` = 3.68 ✓ |
+
+Yani eşiği **her yerde** geçmek için **α ≥ 0.42**; pay bırakmak için **0.45**.
+(Ölçülen 2.67, sayfa zemini arkadaki 2.70'in blur'la biraz karışmış hali —
+en kötü hal olan 2.43 değil. Örnekleme noktası kartın üstündeki başlık şeridine
+denk geliyor.)
+
+0.45 hâlâ koyu modun 0.72'sinin çok altında, yani "açık modda daha düşük opaklık"
+niyeti korunur ve **koyu mod hiç değişmez** (ayrı token değeri).
+
+**Uygulanmadı:** %35 Faz 2'de verilmiş bir palet kararı ve perdenin koyuluğu
+görsel bir tercih. Ayrıca §9'un kabul ölçütü (*açık mod ≥ koyu mod*) 2.67 ile
+zaten tutuyor. **Kullanıcıya soruldu.**
 
 ### W — lejant, ısı haritası ve seçili buton aynı dili konuşuyor mu? ✅
 

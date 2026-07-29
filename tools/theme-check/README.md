@@ -63,10 +63,14 @@ Fark çıkarsa `shots/diff-<ekran>.png` yazılır — kırmızı pikseller nered
 değiştiğini gösterir. **Diff görüntüsüne bakmadan "regresyon var" demeyin**
 (aşağıdaki saat tuzağı tam da böyle yakalandı).
 
-`shoot-all.mjs` 11 ekran çeker: `home` · `exams` · `osym` · `manual` · `goals` ·
-`anx` · `anx-low` · `report` · `hub` · `psych-cat` · `breath`. Yeni bir ekran
-eklerken `SCREENS` sabitine ekleyin — hem referans hem karşılaştırma tarafı
-kendiliğinden kapsar.
+`shoot-all.mjs` 14 ekran çeker: `home` · `exams` · `osym` · `manual` · `goals` ·
+`anx` · `anx-low` · `report` · `hub` · `psych-cat` · `breath` · `paywall` ·
+`confirm` · `toast`. Yeni bir ekran eklerken `SCREENS` sabitine ekleyin — hem
+referans hem karşılaştırma tarafı kendiliğinden kapsar.
+
+Overlay ekranları (`paywall`/`confirm`/`toast`) `"viewport"` adımıyla işaretli ve
+**tam sayfa değil** çekiliyor: `position:fixed` oldukları için fullPage çekimde
+arkalarındaki kaydırılabilir sayfanın boyu belirleyici oluyor ve gürültü üretiyor.
 
 ### ⚠️ `pg.clock.setFixedTime` ŞART
 
@@ -133,12 +137,13 @@ açık modun hedefi koyu moda eşit ya da ondan iyi olmak.
 | `contrast-report.mjs` | Rapor: iki çubuk grafik (1.4.11), 12 metnin kova ayrımı, toggle |
 | `contrast-psychology.mjs` | Psikoloji: gradyan zeminli metinler, nefes çemberi |
 | `contrast-chevrons.mjs` | Chevron ikonları — anlam taşıyan grafik, 3:1 |
+| `contrast-overlays.mjs` | Paywall, onay sheet'i, toast: metinler, gradyan CTA, ikon çipi ve yüzey ↔ perde sınırı |
 
 ### Davranış
 
 | Betik | Ne doğrular |
 |---|---|
-| `theme-transition.mjs` | `theme-anim` geçici sınıfı: mod değişiminde açılıyor, 200ms sonra kapanıyor, muaf öğelere dokunmuyor, `prefers-reduced-motion`'da hiç eklenmiyor, **BreathingPlayer çalışırken nefes döngüsü kesilmiyor** |
+| `theme-transition.mjs` | `theme-anim` geçici sınıfı: mod değişiminde açılıyor, 200ms sonra kapanıyor, muaf öğelere dokunmuyor, `prefers-reduced-motion`'da hiç eklenmiyor, **BreathingPlayer çalışırken nefes döngüsü kesilmiyor**, **paywall (e) ve onay sheet'i (f) açıkken mod değişimi** |
 
 ### `solvers/` — değerlerin nereden geldiği
 
