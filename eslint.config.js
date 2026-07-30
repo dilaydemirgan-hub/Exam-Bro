@@ -4,7 +4,10 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-  { ignores: ['dist', 'android', 'ios', 'node_modules'] },
+  // `_silinecekler`: gözden geçirilip silinecek dosyaların geçici karantinası.
+  // İçinde eski bir `dist` bulunduğu için taranırsa üretilmiş bundle'lar
+  // yüzlerce sahte hata veriyor. Klasör silinince bu satır da kaldırılabilir.
+  { ignores: ['dist', 'android', 'ios', 'node_modules', '_silinecekler'] },
   {
     files: ['**/*.{js,jsx,mjs}'],
     languageOptions: {

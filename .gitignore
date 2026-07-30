@@ -6,3 +6,6 @@ node_modules/
 
 # Build output
 dist/
+
+# Gözden geçirilip silinecek dosyaların geçici karantinası (bkz. eslint.config.js)
+_silinecekler/
